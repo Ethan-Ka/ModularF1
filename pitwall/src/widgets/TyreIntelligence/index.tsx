@@ -90,7 +90,7 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
 
   const compound = compoundKey(currentStint.compound)
   const lapCount = getLapCount(laps, driverNumber)
-  const tyreAge = lapCount - currentStint.lap_start + 1 + (currentStint.tyre_age_at_start ?? 0)
+  const tyreAge = Math.max(0, lapCount - currentStint.lap_start + 1 + (currentStint.tyre_age_at_start ?? 0))
   const baseWindow = BASE_WINDOW[compound] ?? 25
 
   // Degradation rate estimate: simplified for Phase 1
@@ -105,13 +105,13 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
   )
 
   const lapsToCliff = cliffLap - lapCount
+  const cliffTyreLife = Math.max(1, cliffLap - currentStint.lap_start + 1 + (currentStint.tyre_age_at_start ?? 0))
+  const degradationPct = Math.max(0, Math.min(100, (tyreAge / cliffTyreLife) * 100))
   const compoundColor = COMPOUND_COLORS[compound] ?? 'var(--muted)'
   const compoundAbbr = COMPOUND_ABBR[compound] ?? compound.slice(0, 1)
-
-  let cliffColor: string
-  if (lapsToCliff < 3) cliffColor = 'var(--red)'
-  else if (lapsToCliff <= 5) cliffColor = 'var(--amber)'
-  else cliffColor = 'var(--green)'
+  const cliffText = lapsToCliff > 0
+    ? `Cliff lap ${cliffLap} (${lapsToCliff} to cliff)`
+    : `Cliff lap ${cliffLap} (past cliff)`
 
   const formula = (config?.settings?.formula as string) ??
     `CLIFF = stint_start + BASE_WINDOW[${compound}]\n  − (track_temp−45)×0.3\n  − deg_rate×1.8\n  + sc_laps×2.1`
@@ -123,11 +123,11 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
       display: 'flex',
       flexDirection: 'column',
       gap: 0,
-      padding: 10,
+      padding: 8,
       overflow: 'hidden',
     }}>
       {/* Compound badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <div style={{
           width: 36,
           height: 36,
@@ -170,16 +170,16 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: 6,
+        gap: 7,
         marginBottom: 10,
       }}>
-        <StatBox label="Tyre age" value={`${tyreAge} laps`} />
-        <StatBox label="Cliff lap" value={`Lap ${cliffLap}`} valueColor="var(--muted)" />
-        <StatBox
-          label="Laps to cliff"
-          value={lapsToCliff > 0 ? `${lapsToCliff}` : 'PAST'}
-          valueColor={cliffColor}
+        <DegradationStatBox
+          percentage={degradationPct}
+          cliffText={cliffText}
+          accentColor={compoundColor}
         />
+        <StatBox label="Tyre age" value={`${tyreAge} laps`} />
+        <StatBox label="Tyre life" value={`${tyreAge}/${cliffTyreLife} laps`} />
         <StatBox label="Track temp" value={`${trackTemp.toFixed(0)}°C`} />
       </div>
 
@@ -187,21 +187,21 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
       <div style={{
         fontFamily: 'var(--mono)',
         fontSize: 7,
-        color: 'var(--muted2)',
+        color: 'var(--muted)',
         letterSpacing: '0.08em',
-        marginBottom: 8,
+        marginBottom: 10,
       }}>
         Est. accuracy: ±3 laps
       </div>
 
       {/* Formula collapsed block */}
-      <details style={{ marginTop: 'auto' }}>
+      <details style={{ marginTop: 0 }}>
         <summary style={{
           fontFamily: 'var(--mono)',
           fontSize: 7,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          color: 'var(--muted2)',
+          color: 'var(--muted)',
           cursor: 'pointer',
           userSelect: 'none',
           listStyle: 'none',
@@ -234,7 +234,7 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
 function StatBox({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
     <div style={{
-      background: 'var(--bg4)',
+      background: 'linear-gradient(180deg, var(--bg4) 0%, var(--bg3) 100%)',
       borderRadius: 3,
       border: '0.5px solid var(--border)',
       padding: '6px 8px',
@@ -244,7 +244,7 @@ function StatBox({ label, value, valueColor }: { label: string; value: string; v
         fontSize: 7,
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: 'var(--muted2)',
+        color: 'var(--muted)',
         marginBottom: 3,
       }}>
         {label}
@@ -257,6 +257,87 @@ function StatBox({ label, value, valueColor }: { label: string; value: string; v
         lineHeight: 1,
       }}>
         {value}
+      </div>
+    </div>
+  )
+}
+
+function DegradationStatBox({
+  percentage,
+  cliffText,
+  accentColor,
+}: {
+  percentage: number
+  cliffText: string
+  accentColor: string
+}) {
+  let meterColor = 'var(--green)'
+  if (percentage >= 90) meterColor = 'var(--red)'
+  else if (percentage >= 75) meterColor = 'var(--amber)'
+
+  return (
+    <div style={{
+      background: 'linear-gradient(180deg, var(--bg4) 0%, var(--bg3) 100%)',
+      borderRadius: 3,
+      border: '0.5px solid var(--border)',
+      padding: '6px 8px',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 3,
+      }}>
+        <div style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'var(--muted)',
+          lineHeight: 1,
+        }}>
+          Tyre degradation
+        </div>
+        <div style={{
+          fontFamily: 'var(--cond)',
+          fontSize: 20,
+          fontWeight: 700,
+          color: meterColor,
+          lineHeight: 1,
+        }}>
+          {Math.round(percentage)}%
+        </div>
+      </div>
+
+      <div style={{
+        position: 'relative',
+        height: 8,
+        borderRadius: 999,
+        border: '0.5px solid var(--border2)',
+        background: `linear-gradient(90deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, var(--bg3) 100%)`,
+        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03)',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${percentage}%`,
+          height: '100%',
+          background: `linear-gradient(90deg, color-mix(in srgb, ${accentColor} 78%, ${meterColor}) 0%, ${meterColor} 100%)`,
+          transition: 'width 220ms ease-out',
+        }} />
+      </div>
+
+      <div style={{
+        marginTop: 4,
+        fontFamily: 'var(--mono)',
+        fontSize: 7,
+        color: 'var(--muted)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }} title={cliffText}>
+        {cliffText}
       </div>
     </div>
   )

@@ -6,6 +6,7 @@ import type { OpenF1Interval } from '../api/openf1'
 export function useIntervals() {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
   const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
+  const mode = useSessionStore((s) => s.mode)
 
   return useQuery({
     queryKey: ['intervals', sessionKey],
@@ -21,6 +22,6 @@ export function useIntervals() {
     },
     enabled: !!sessionKey,
     staleTime: 2_000,
-    refetchInterval: 2_000,
+    refetchInterval: mode === 'live' ? 2_000 : false,
   })
 }

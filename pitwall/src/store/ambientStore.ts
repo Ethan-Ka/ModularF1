@@ -26,10 +26,26 @@ interface AmbientStore {
   leaderDriverNumber: number | null
   toasts: ToastItem[]
   setFlagState: (state: FlagState, message?: string) => void
+  addToast: (message: string, flagState?: FlagState) => void
   setLeaderColorMode: (enabled: boolean) => void
   setLeader: (driverNumber: number, color: string) => void
   dismissToast: (id: string) => void
   clearToasts: () => void
+}
+
+function buildToast(message: string, flagState: FlagState): ToastItem {
+  return {
+    id: crypto.randomUUID(),
+    message,
+    flagState,
+    timestamp: Date.now(),
+  }
+}
+
+function scheduleToastRemoval(toastId: string) {
+  setTimeout(() => {
+    useAmbientStore.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== toastId) }))
+  }, 4200) // 300ms in + 2000ms hold + 600ms out + buffer
 }
 
 export const useAmbientStore = create<AmbientStore>()((set, get) => ({
@@ -44,12 +60,7 @@ export const useAmbientStore = create<AmbientStore>()((set, get) => ({
     const prev = get().flagState
     if (prev === state && state !== 'FASTEST_LAP') return
 
-    const toast: ToastItem = {
-      id: crypto.randomUUID(),
-      message: message ?? state.replace('_', ' '),
-      flagState: state,
-      timestamp: Date.now(),
-    }
+    const toast = buildToast(message ?? state.replace('_', ' '), state)
 
     // Use updater form so flagState and toasts are read atomically from the
     // same snapshot — avoids TOCTOU if two flag events arrive in the same tick.
@@ -66,9 +77,13 @@ export const useAmbientStore = create<AmbientStore>()((set, get) => ({
     }
 
     // Auto-remove toast after display time
-    setTimeout(() => {
-      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== toast.id) }))
-    }, 4200) // 300ms in + 2000ms hold + 600ms out + buffer
+    scheduleToastRemoval(toast.id)
+  },
+
+  addToast: (message, flagState = 'YELLOW') => {
+    const toast = buildToast(message, flagState)
+    set((s) => ({ toasts: [...s.toasts, toast] }))
+    scheduleToastRemoval(toast.id)
   },
 
   setLeaderColorMode: (enabled) => set({ leaderColorMode: enabled }),

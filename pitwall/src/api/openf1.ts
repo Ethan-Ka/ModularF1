@@ -2,7 +2,20 @@
 // Base URL: https://api.openf1.org/v1/
 // Live data requires Bearer token. Historical (2023+) is free.
 
+import { useAmbientStore } from '../store/ambientStore'
+
 const BASE_URL = 'https://api.openf1.org/v1'
+const RATE_LIMIT_TOAST_COOLDOWN_MS = 15_000
+let lastRateLimitToastAt = 0
+
+function notifyRateLimitToast() {
+  const now = Date.now()
+  if (now - lastRateLimitToastAt < RATE_LIMIT_TOAST_COOLDOWN_MS) return
+  lastRateLimitToastAt = now
+  useAmbientStore
+    .getState()
+    .addToast('OpenF1 rate limit reached. Requests are being throttled.', 'YELLOW')
+}
 
 export interface OpenF1Session {
   session_key: number
@@ -134,6 +147,7 @@ async function openf1Fetch<T>(
 
   const res = await fetch(url.toString(), { headers })
   if (!res.ok) {
+    if (res.status === 429) notifyRateLimitToast()
     const err = new Error(`OpenF1 ${res.status}: ${path}`)
     ;(err as any).status = res.status
     throw err

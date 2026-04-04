@@ -7,6 +7,7 @@ import type { OpenF1Position } from '../api/openf1'
 export function usePositions() {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
   const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
+  const mode = useSessionStore((s) => s.mode)
 
   return useQuery({
     queryKey: ['positions', sessionKey],
@@ -22,7 +23,7 @@ export function usePositions() {
     },
     enabled: !!sessionKey,
     staleTime: 3_000,
-    refetchInterval: 3_000,
+    refetchInterval: mode === 'live' ? 3_000 : false,
   })
 }
 

@@ -13,10 +13,11 @@ export function useSessions(year?: number) {
 
 export function useLatestSession() {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
+  const mode = useSessionStore((s) => s.mode)
   return useQuery({
     queryKey: ['sessions', 'latest'],
     queryFn: () => fetchLatestSession(apiKey),
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: mode === 'live' ? 60_000 : false,
   })
 }

@@ -22,6 +22,7 @@ function mapFlagToState(flag: string | null, message: string): FlagState | null 
 export function useRaceControl() {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
   const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
+  const mode = useSessionStore((s) => s.mode)
   const setFlagState = useAmbientStore((s) => s.setFlagState)
   const lastProcessedRef = useRef<string>('')
 
@@ -30,7 +31,7 @@ export function useRaceControl() {
     queryFn: () => fetchRaceControl(sessionKey!, apiKey),
     enabled: !!sessionKey,
     staleTime: 5_000,
-    refetchInterval: 5_000,
+    refetchInterval: mode === 'live' ? 5_000 : false,
   })
 
   useEffect(() => {
