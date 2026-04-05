@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { OpenF1Session } from '../api/openf1'
 
-type AppMode = 'live' | 'historical' | 'onboarding'
+export type AppMode = 'live' | 'historical' | 'onboarding'
 
 interface SessionStore {
   apiKey: string | null
@@ -33,7 +33,11 @@ export const useSessionStore = create<SessionStore>()(
     }),
     {
       name: 'pitwall-session',
-      partialize: (s) => ({ apiKey: s.apiKey, mode: s.mode }),
+      partialize: (s) => ({
+        apiKey: s.apiKey,
+        mode: s.mode,
+        apiRequestsEnabled: s.apiRequestsEnabled,
+      }),
     }
   )
 )

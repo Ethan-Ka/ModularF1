@@ -1,5 +1,6 @@
 import { useWeather } from '../../hooks/useWeather'
 import type { OpenF1Weather } from '../../api/openf1'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
 
 interface WeatherDashboardProps {
   widgetId: string
@@ -94,6 +95,7 @@ function windDirLabel(deg: number): string {
 
 export function WeatherDashboard({ widgetId: _ }: WeatherDashboardProps) {
   const { data } = useWeather()
+  const refreshFade = useRefreshFade([data])
 
   const latest: OpenF1Weather | undefined = data?.[data.length - 1]
   const prev: OpenF1Weather | undefined = data?.[data.length - 2]
@@ -153,7 +155,9 @@ export function WeatherDashboard({ widgetId: _ }: WeatherDashboardProps) {
   ]
 
   return (
-    <div style={{
+    <div
+      className={refreshFade ? 'data-refresh-fade' : undefined}
+      style={{
       width: '100%',
       height: '100%',
       display: 'grid',

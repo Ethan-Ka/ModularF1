@@ -1,12 +1,13 @@
 {
-  "ferrari": { "primary": "#E8002D", "secondary": "#F6C343" },
-  "mclaren": { "primary": "#FF8000", "secondary": "#63C5FF" },
-  "red_bull": { "primary": "#3671C6", "secondary": "#E8132B" },
-  "mercedes": { "primary": "#00A0DD", "secondary": "#6DE5E9" },
-  "aston_martin": { "primary": "#1AACB8", "secondary": "#87F2CF" },
-  "alpine": { "primary": "#52E252", "secondary": "#0078FF" },
-  "rb": { "primary": "#C92D4B", "secondary": "#6C7BFF" },
-  "williams": { "primary": "#64C4FF", "secondary": "#1A5BBE" },
-  "haas": { "primary": "#B6BABD", "secondary": "#E10600" },
-  "kick_sauber": { "primary": "#00E701", "secondary": "#0D5C2D" }
+  "ferrari":      { "primary": "#E8002D", "secondary": "#5C0012" },
+  "mclaren":      { "primary": "#FF8000", "secondary": "#804000" },
+  "red_bull":     { "primary": "#3671C6", "secondary": "#142948" },
+  "mercedes":     { "primary": "#27F4D2", "secondary": "#067E6A" },
+  "aston_martin": { "primary": "#229971", "secondary": "#0F4331" },
+  "alpine":       { "primary": "#00A1E8", "secondary": "#004E70" },
+  "rb":           { "primary": "#6692FF", "secondary": "#0038C2" },
+  "williams":     { "primary": "#1868DB", "secondary": "#082145" },
+  "haas":         { "primary": "#E6002B", "secondary": "#B6BABD" },
+  "audi":         { "primary": "#FF2D00", "secondary": "#751500" },
+  "cadillac":     { "primary": "#AAAAAD", "secondary": "#58585B" }
 }

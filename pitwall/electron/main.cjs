@@ -1,9 +1,89 @@
-const { app, BrowserWindow, shell, ipcMain, Menu } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, dialog } = require('electron')
+const nodeFs = require('fs')
+const fs = require('fs/promises')
 const path = require('path')
 
 const isDev = process.env.VITE_DEV_SERVER_URL != null
 const mainWindows = new Set()
 let devControlWindow = null
+const pendingBootstrapByWebContentsId = new Map()
+
+function resolveAppIconPath() {
+  const winCandidates = isDev
+    ? [
+        path.join(__dirname, '../public/branding/pitwall-monogram.ico'),
+        path.join(__dirname, '../public/branding/pitwall-monogram-256.png'),
+      ]
+    : [
+        path.join(__dirname, '../dist/branding/pitwall-monogram.ico'),
+        path.join(__dirname, '../dist/branding/pitwall-monogram-256.png'),
+      ]
+
+  const nonWinCandidates = isDev
+    ? [
+        path.join(__dirname, '../public/branding/pitwall-monogram.svg'),
+        path.join(__dirname, '../public/branding/pitwall-monogram-256.png'),
+      ]
+    : [
+        path.join(__dirname, '../dist/branding/pitwall-monogram.svg'),
+        path.join(__dirname, '../dist/branding/pitwall-monogram-256.png'),
+      ]
+
+  const candidates = process.platform === 'win32'
+    ? winCandidates
+    : nonWinCandidates
+
+  for (const iconPath of candidates) {
+    if (nodeFs.existsSync(iconPath)) return iconPath
+  }
+
+  return undefined
+}
+
+const appIconPath = resolveAppIconPath()
+
+function maybeSendBootstrapWidget(win, payload) {
+  if (!payload || typeof payload !== 'object') return
+  if (win.isDestroyed() || win.webContents.isDestroyed()) return
+  pendingBootstrapByWebContentsId.set(win.webContents.id, payload)
+  win.webContents.send('window-bootstrap-widget', payload)
+}
+
+function finalizeWindowStartup(win, options = {}) {
+  const { bootstrapWidget } = options
+  let bootstrapSent = false
+
+  const sendBootstrapOnce = () => {
+    if (bootstrapSent) return
+    maybeSendBootstrapWidget(win, bootstrapWidget)
+    bootstrapSent = true
+  }
+
+  const showIfNeeded = () => {
+    if (!win.isDestroyed() && !win.isVisible()) {
+      win.show()
+    }
+  }
+
+  // Show as soon as the renderer has finished loading the document.
+  // This is typically faster than waiting for ready-to-show (first full paint).
+  win.webContents.once('did-finish-load', () => {
+    sendBootstrapOnce()
+    showIfNeeded()
+  })
+
+  // Keep ready-to-show as a secondary safety net.
+  win.once('ready-to-show', () => {
+    sendBootstrapOnce()
+    showIfNeeded()
+  })
+
+  // Fallback in case lifecycle events are delayed.
+  setTimeout(() => {
+    sendBootstrapOnce()
+    showIfNeeded()
+  }, 2500)
+}
 
 function createWindow(options = {}) {
   const win = new BrowserWindow({
@@ -15,7 +95,9 @@ function createWindow(options = {}) {
     minHeight: 600,
     backgroundColor: '#0B0B0C',
     show: false,
+    title: 'PITWALL',
     titleBarStyle: 'hiddenInset',
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -23,6 +105,7 @@ function createWindow(options = {}) {
       webSecurity: true,
     },
   })
+  const webContentsId = win.webContents.id
 
   if (isDev) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)
@@ -34,11 +117,20 @@ function createWindow(options = {}) {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 
-  win.once('ready-to-show', () => win.show())
+  finalizeWindowStartup(win, options)
 
   mainWindows.add(win)
   win.on('closed', () => {
+    pendingBootstrapByWebContentsId.delete(webContentsId)
     mainWindows.delete(win)
+  })
+
+  win.on('focus', () => {
+    if (!win.isDestroyed()) win.webContents.send('window-focus-change', true)
+  })
+
+  win.on('blur', () => {
+    if (!win.isDestroyed()) win.webContents.send('window-focus-change', false)
   })
 
   // Open external links in browser, not Electron
@@ -57,12 +149,13 @@ function createDevControlWindow() {
   }
 
   devControlWindow = new BrowserWindow({
-    width: 420,
+    width: 560,
     height: 520,
-    minWidth: 360,
+    minWidth: 520,
     minHeight: 420,
     resizable: true,
     title: 'Developer Menu',
+    icon: appIconPath,
     backgroundColor: '#111216',
     autoHideMenuBar: true,
     webPreferences: {
@@ -83,6 +176,15 @@ function createDevControlWindow() {
 }
 
 function buildAppMenu() {
+  const sendToFocusedWindow = (action, payload) => {
+    const focused = BrowserWindow.getFocusedWindow()
+    if (focused && !focused.isDestroyed()) {
+      focused.webContents.send('debug-action', { action, payload })
+      return
+    }
+    broadcastDebugAction(action, payload)
+  }
+
   const template = [
     ...(process.platform === 'darwin'
       ? [
@@ -104,7 +206,35 @@ function buildAppMenu() {
       : []),
     {
       label: 'File',
-      submenu: [process.platform === 'darwin' ? { role: 'close' } : { role: 'quit' }],
+      submenu: [
+        {
+          label: 'New Window',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            const focused = BrowserWindow.getFocusedWindow()
+            const [x, y] = focused ? focused.getPosition() : [100, 100]
+            createWindow({ x: x + 30, y: y + 30 })
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Open Session Browser',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: () => sendToFocusedWindow('open-session-browser'),
+        },
+        {
+          label: 'Open Settings',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => sendToFocusedWindow('open-settings'),
+        },
+        {
+          label: 'Toggle Log Panel',
+          accelerator: 'CmdOrCtrl+L',
+          click: () => sendToFocusedWindow('toggle-log-panel'),
+        },
+        { type: 'separator' },
+        process.platform === 'darwin' ? { role: 'close' } : { role: 'quit' },
+      ],
     },
     {
       label: 'Edit',
@@ -182,17 +312,71 @@ function broadcastDebugAction(action, payload) {
 }
 
 app.whenReady().then(() => {
+  app.setName('PITWALL')
   buildAppMenu()
 
   // IPC handler: open a new window offset from the requesting window
-  ipcMain.handle('open-new-window', (_event) => {
+  ipcMain.handle('open-new-window', (_event, options) => {
     const sender = BrowserWindow.fromWebContents(_event.sender)
     const [x, y] = sender ? sender.getPosition() : [100, 100]
-    createWindow({ x: x + 30, y: y + 30 })
+    const bootstrapWidget = options && typeof options === 'object' ? options.transferWidget : undefined
+    createWindow({ x: x + 30, y: y + 30, bootstrapWidget })
   })
 
   ipcMain.handle('open-dev-control-window', () => {
     createDevControlWindow()
+  })
+
+  ipcMain.handle('consume-window-bootstrap-widget', (event) => {
+    const payload = pendingBootstrapByWebContentsId.get(event.sender.id)
+    if (!payload) return null
+    pendingBootstrapByWebContentsId.delete(event.sender.id)
+    return payload
+  })
+
+  ipcMain.handle('save-pitwall-file', async (_event, options) => {
+    const defaultName =
+      options && typeof options === 'object' && typeof options.defaultName === 'string'
+        ? options.defaultName
+        : 'pitwall-export.bundle.pitwall'
+    const contents =
+      options && typeof options === 'object' && typeof options.contents === 'string'
+        ? options.contents
+        : null
+
+    if (contents == null) {
+      throw new Error('Missing file contents for save-pitwall-file.')
+    }
+
+    const result = await dialog.showSaveDialog({
+      title: 'Export Pitwall file',
+      defaultPath: defaultName,
+      filters: [{ name: 'Pitwall files', extensions: ['pitwall'] }],
+      properties: ['createDirectory', 'showOverwriteConfirmation'],
+    })
+
+    if (result.canceled || !result.filePath) {
+      return { canceled: true }
+    }
+
+    await fs.writeFile(result.filePath, contents, 'utf-8')
+    return { canceled: false, filePath: result.filePath }
+  })
+
+  ipcMain.handle('open-pitwall-file', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Import Pitwall file',
+      filters: [{ name: 'Pitwall files', extensions: ['pitwall'] }],
+      properties: ['openFile'],
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true }
+    }
+
+    const filePath = result.filePaths[0]
+    const contents = await fs.readFile(filePath, 'utf-8')
+    return { canceled: false, filePath, contents }
   })
 
   ipcMain.on('debug-trigger-action', (_event, data) => {

@@ -213,6 +213,54 @@ function runDebugAction(action: string, payload?: unknown) {
       ambient.setFlagState('CALM', 'Calm period')
       log.addEntry('DBG', 'Flag set to CALM from Developer Menu.', 'devtools')
       break
+    case 'set-flag-waiting-start':
+      ambient.setFlagState('WAITING_FOR_START', 'Waiting for race start')
+      log.addEntry('DBG', 'Flag set to WAITING_FOR_START from Developer Menu.', 'devtools')
+      break
+    case 'set-flag-national-anthem':
+      ambient.setFlagState('NATIONAL_ANTHEM', 'National anthem')
+      log.addEntry('DBG', 'Flag set to NATIONAL_ANTHEM from Developer Menu.', 'devtools')
+      break
+    case 'open-settings':
+      window.dispatchEvent(new Event('pitwall-open-settings'))
+      log.addEntry('DBG', 'Opened Settings from menu action.', 'devtools')
+      break
+    case 'open-session-browser':
+      window.dispatchEvent(new Event('pitwall-open-session-browser'))
+      log.addEntry('DBG', 'Opened Session Browser from menu action.', 'devtools')
+      break
+    case 'toggle-log-panel':
+      window.dispatchEvent(new Event('pitwall-toggle-log-panel'))
+      log.addEntry('DBG', 'Toggled Diagnostic Log from menu action.', 'devtools')
+      break
+    case 'loading-preview-toggle':
+      window.dispatchEvent(new Event('pitwall-loading-preview-toggle'))
+      log.addEntry('DBG', 'Toggled loading preview from Developer Menu.', 'devtools')
+      break
+    case 'loading-preview-start':
+      window.dispatchEvent(new Event('pitwall-loading-preview-start'))
+      log.addEntry('DBG', 'Started loading preview from Developer Menu.', 'devtools')
+      break
+    case 'loading-preview-reset':
+      window.dispatchEvent(new Event('pitwall-loading-preview-reset'))
+      log.addEntry('DBG', 'Reset loading preview progress from Developer Menu.', 'devtools')
+      break
+    case 'loading-preview-finish':
+      window.dispatchEvent(new Event('pitwall-loading-preview-finish'))
+      log.addEntry('DBG', 'Finished loading preview from Developer Menu.', 'devtools')
+      break
+    case 'loading-preview-advance-session':
+      window.dispatchEvent(new CustomEvent('pitwall-loading-preview-advance-step', { detail: { step: 'sessionReady' } }))
+      log.addEntry('DBG', 'Advanced loading preview: session step.', 'devtools')
+      break
+    case 'loading-preview-advance-drivers':
+      window.dispatchEvent(new CustomEvent('pitwall-loading-preview-advance-step', { detail: { step: 'driversReady' } }))
+      log.addEntry('DBG', 'Advanced loading preview: driver step.', 'devtools')
+      break
+    case 'loading-preview-advance-workspace':
+      window.dispatchEvent(new CustomEvent('pitwall-loading-preview-advance-step', { detail: { step: 'workspaceReady' } }))
+      log.addEntry('DBG', 'Advanced loading preview: workspace step.', 'devtools')
+      break
     default:
       log.addEntry('WARN', `Unknown debug action: ${action}`, 'devtools')
   }

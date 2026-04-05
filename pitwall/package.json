@@ -1,7 +1,7 @@
 {
   "name": "pitwall",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.5-alpha",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
+    "assets:logo": "node scripts/generate-logo-assets.mjs",
+    "assets:sync:f1": "node scripts/sync-f1-driver-assets.mjs",
     "electron:dev": "concurrently -k \"cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\" \"vite\"",
     "electron:build": "vite build && electron-builder",
     "electron:preview": "vite build && cross-env NODE_ENV=production electron ."
@@ -17,11 +19,24 @@
   "build": {
     "appId": "com.pitwall.app",
     "productName": "Pitwall",
-    "directories": { "output": "dist-electron" },
-    "files": ["dist/**/*", "electron/**/*"],
-    "win": { "target": "nsis" },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" }
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/branding/pitwall-monogram.ico"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/branding/pitwall-monogram-256.png"
+    }
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
@@ -38,6 +53,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

@@ -1,12 +1,188 @@
 {
   "season": 2026,
-  "version": 1,
+  "version": 2,
   "description": "Shipped season asset bundle for 2026",
+  "teams": [
+    "ferrari",
+    "mclaren",
+    "red_bull",
+    "mercedes",
+    "aston_martin",
+    "alpine",
+    "rb",
+    "williams",
+    "haas",
+    "audi",
+    "cadillac"
+  ],
+  "drivers": [
+    {
+      "number": 1,
+      "code": "NOR",
+      "ref": "lannor01",
+      "name": "Lando Norris",
+      "team": "mclaren"
+    },
+    {
+      "number": 3,
+      "code": "VER",
+      "ref": "maxver01",
+      "name": "Max Verstappen",
+      "team": "red_bull"
+    },
+    {
+      "number": 5,
+      "code": "BOR",
+      "ref": "gabbor01",
+      "name": "Gabriel Bortoleto",
+      "team": "audi"
+    },
+    {
+      "number": 6,
+      "code": "HAD",
+      "ref": "isahad01",
+      "name": "Isack Hadjar",
+      "team": "red_bull"
+    },
+    {
+      "number": 10,
+      "code": "GAS",
+      "ref": "piegas01",
+      "name": "Pierre Gasly",
+      "team": "alpine"
+    },
+    {
+      "number": 11,
+      "code": "PER",
+      "ref": "serper01",
+      "name": "Sergio Perez",
+      "team": "cadillac"
+    },
+    {
+      "number": 12,
+      "code": "ANT",
+      "ref": "andant01",
+      "name": "Andrea Kimi Antonelli",
+      "team": "mercedes"
+    },
+    {
+      "number": 14,
+      "code": "ALO",
+      "ref": "feralo01",
+      "name": "Fernando Alonso",
+      "team": "aston_martin"
+    },
+    {
+      "number": 16,
+      "code": "LEC",
+      "ref": "chalec01",
+      "name": "Charles Leclerc",
+      "team": "ferrari"
+    },
+    {
+      "number": 18,
+      "code": "STR",
+      "ref": "lanstr01",
+      "name": "Lance Stroll",
+      "team": "aston_martin"
+    },
+    {
+      "number": 23,
+      "code": "ALB",
+      "ref": "alealb01",
+      "name": "Alexander Albon",
+      "team": "williams"
+    },
+    {
+      "number": 27,
+      "code": "HUL",
+      "ref": "nichul01",
+      "name": "Nico Hulkenberg",
+      "team": "audi"
+    },
+    {
+      "number": 30,
+      "code": "LAW",
+      "ref": "lialaw01",
+      "name": "Liam Lawson",
+      "team": "rb"
+    },
+    {
+      "number": 31,
+      "code": "OCO",
+      "ref": "estoco01",
+      "name": "Esteban Ocon",
+      "team": "haas"
+    },
+    {
+      "number": 41,
+      "code": "LIN",
+      "ref": "arvlin01",
+      "name": "Arvid Lindblad",
+      "team": "rb"
+    },
+    {
+      "number": 43,
+      "code": "COL",
+      "ref": "fracol01",
+      "name": "Franco Colapinto",
+      "team": "alpine"
+    },
+    {
+      "number": 44,
+      "code": "HAM",
+      "ref": "lewham01",
+      "name": "Lewis Hamilton",
+      "team": "ferrari"
+    },
+    {
+      "number": 55,
+      "code": "SAI",
+      "ref": "carsai01",
+      "name": "Carlos Sainz Jr",
+      "team": "williams"
+    },
+    {
+      "number": 63,
+      "code": "RUS",
+      "ref": "georus01",
+      "name": "George Russell",
+      "team": "mercedes"
+    },
+    {
+      "number": 77,
+      "code": "BOT",
+      "ref": "valbot01",
+      "name": "Valtteri Bottas",
+      "team": "cadillac"
+    },
+    {
+      "number": 81,
+      "code": "PIA",
+      "ref": "oscpia01",
+      "name": "Oscar Piastri",
+      "team": "mclaren"
+    },
+    {
+      "number": 87,
+      "code": "BEA",
+      "ref": "olibea01",
+      "name": "Oliver Bearman",
+      "team": "haas"
+    }
+  ],
   "assets": {
     "cars": "cars/shapes",
+    "carSpecs": "cars/specs.json",
     "tracks": "tracks/layouts",
     "drivers": "drivers/headshots",
+    "driverGrid": "drivers/grid.json",
+    "teamDirectory": "teams/teams.json",
     "teamLogos": "teams/logos",
-    "teamColors": "teams/colors.json"
+    "teamColors": "teams/colors.json",
+    "trackMetadata": "tracks/metadata.json",
+    "driverFlags": "drivers/flags",
+    "driverNumberFont": "drivers/number-fonts/teko-latin-600-normal.woff2",
+    "driverNumberSvgs": "drivers/number-svgs"
   }
 }

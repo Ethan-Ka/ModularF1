@@ -151,6 +151,7 @@ export function FormulaTab({ formula, onChange, defaultFormula }: FormulaTabProp
       <button
         onClick={() => onChange(defaultFormula)}
         disabled={!isModified}
+        className="interactive-button"
         style={{
           alignSelf: 'flex-start',
           padding: '5px 12px',

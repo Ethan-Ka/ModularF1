@@ -6,52 +6,21 @@ import type { WidgetConfig } from '../../store/workspaceStore'
 import { useDraggingStore } from '../../store/draggingStore'
 import { WidgetHost } from '../WidgetHost/WidgetHost'
 import { WidgetPicker } from '../WidgetPicker/WidgetPicker'
-
-// Lazy widget imports
-import { LapDeltaTower } from '../../widgets/LapDeltaTower'
-import { RunningOrderStrip } from '../../widgets/RunningOrderStrip'
-import { RaceControlFeed } from '../../widgets/RaceControlFeed'
-import { WeatherDashboard } from '../../widgets/WeatherDashboard'
-import { TyreIntelligence } from '../../widgets/TyreIntelligence'
-import { FullTrackMap } from '../../widgets/FullTrackMap'
-import { WeatherRadar } from '../../widgets/WeatherRadar'
-
-// Widget type → component registry
-// These must be stable component references (not inline arrows) — React uses
-// referential identity to decide whether to unmount/remount. Inline arrows here
-// would create a new type on every Canvas render and remount every widget,
-// wiping local state and re-triggering all queries.
-const WIDGET_REGISTRY: Record<string, React.ComponentType<{ widgetId: string }>> = {
-  LapDeltaTower,
-  RunningOrderStrip,
-  RaceControlFeed,
-  WeatherDashboard,
-  TyreIntelligence,
-  FullTrackMap,
-  WeatherRadar,
-}
-
-// Default layout dimensions per widget type
-const WIDGET_DEFAULTS: Record<string, { w: number; h: number }> = {
-  LapDeltaTower: { w: 12, h: 10 },
-  RunningOrderStrip: { w: 24, h: 2 },
-  RaceControlFeed: { w: 8, h: 8 },
-  WeatherDashboard: { w: 8, h: 5 },
-  TyreIntelligence: { w: 6, h: 6 },
-  FullTrackMap: { w: 8, h: 8 },
-  WeatherRadar: { w: 8, h: 8 },
-}
-
-function getMinHeightForWidget(type: string): number {
-  return type === 'RunningOrderStrip' ? 1 : 3
-}
+import {
+  deserializeWidgetTransferPayload,
+  type WidgetTransferPayload,
+  WIDGET_TRANSFER_MIME,
+} from '../../lib/widgetTransfer'
+import { createPitwallChannel, WINDOW_CLIENT_ID } from '../../lib/windowSync'
+import { WIDGET_DEFAULTS, WIDGET_REGISTRY, getMinHeightForWidget } from '../../widgets/registry'
 
 
 interface CanvasProps {
   tabId: string
+  hideAddWidget?: boolean
 }
 
-export function Canvas({ tabId }: CanvasProps) {
+export function Canvas({ tabId, hideAddWidget = false }: CanvasProps) {
   const tabs = useWorkspaceStore((s) => s.tabs)
   const updateLayout = useWorkspaceStore((s) => s.updateLayout)
   const addWidget = useWorkspaceStore((s) => s.addWidget)
@@ -62,9 +31,25 @@ export function Canvas({ tabId }: CanvasProps) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+        debounceRef.current = null
+      }
+    }
+  }, [])
+
   // Container width for GridLayout
   const [containerWidth, setContainerWidth] = useState(1200)
   const containerElRef = useRef<HTMLDivElement | null>(null)
+  const draggingWidgetIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (hideAddWidget && pickerOpen) {
+      setPickerOpen(false)
+    }
+  }, [hideAddWidget, pickerOpen])
 
   useEffect(() => {
     const node = containerElRef.current
@@ -116,6 +101,50 @@ export function Canvas({ tabId }: CanvasProps) {
     }, 300)
   }
 
+  function buildTransferPayloadFromWidget(widgetId: string): WidgetTransferPayload | null {
+    const currentTab = useWorkspaceStore.getState().tabs.find((t) => t.id === tabIdRef.current)
+    if (!currentTab) return null
+    const widget = currentTab.widgets[widgetId]
+    const layout = currentTab.layout.find((l) => l.i === widgetId)
+    if (!widget || !layout) return null
+
+    return {
+      version: 1,
+      sourceClientId: WINDOW_CLIENT_ID,
+      sourceTabId: tabIdRef.current,
+      widget,
+      layout: {
+        w: layout.w,
+        h: layout.h,
+        minW: layout.minW,
+        minH: layout.minH,
+      },
+    }
+  }
+
+  async function popOutWidgetFromCurrentWindow(widgetId: string) {
+    if (!window.electronAPI) return
+    const payload = buildTransferPayloadFromWidget(widgetId)
+    if (!payload) return
+    try {
+      await window.electronAPI.openNewWindow({ transferWidget: payload })
+      useWorkspaceStore.getState().removeWidget(tabIdRef.current, widgetId)
+    } catch {
+      // Keep the source widget in place if the new window fails to open.
+    }
+  }
+
+  useEffect(() => {
+    if (!window.electronAPI?.onFocusChange) return
+    return window.electronAPI.onFocusChange((focused) => {
+      if (focused) return
+      const draggingWidgetId = draggingWidgetIdRef.current
+      if (!draggingWidgetId) return
+      draggingWidgetIdRef.current = null
+      void popOutWidgetFromCurrentWindow(draggingWidgetId)
+    })
+  }, [])
+
   function handleAddWidget(type: string) {
     const defaults = WIDGET_DEFAULTS[type] ?? { w: 6, h: 6 }
     const id = crypto.randomUUID()
@@ -143,6 +172,7 @@ export function Canvas({ tabId }: CanvasProps) {
   return (
     <div
       ref={containerRef}
+      className="animated-fade"
       style={{
         flex: 1,
         overflow: 'auto',
@@ -152,8 +182,9 @@ export function Canvas({ tabId }: CanvasProps) {
       }}
     >
       {/* Empty state */}
-      {widgetEntries.length === 0 && (
+      {widgetEntries.length === 0 && !hideAddWidget && (
         <div style={{
+          animation: 'fadeInUp var(--motion-slow) var(--motion-out) both',
           position: 'absolute',
           inset: 0,
           display: 'flex',
@@ -191,7 +222,16 @@ export function Canvas({ tabId }: CanvasProps) {
         resizeConfig={{ handles: ['se'] }}
         dropConfig={{
           enabled: true,
-          onDragOver: () => {
+          onDragOver: (e: DragEvent) => {
+            const transferRaw = e.dataTransfer?.getData(WIDGET_TRANSFER_MIME)
+            const transferPayload = deserializeWidgetTransferPayload(transferRaw ?? '')
+            if (transferPayload) {
+              return {
+                w: transferPayload.layout.w,
+                h: transferPayload.layout.h,
+              }
+            }
+
             if (!draggingType) return false
             const defaults = WIDGET_DEFAULTS[draggingType] ?? { w: 6, h: 6 }
             return { w: defaults.w, h: defaults.h }
@@ -200,10 +240,63 @@ export function Canvas({ tabId }: CanvasProps) {
         compactor={noCompactor}
         width={containerWidth}
         onLayoutChange={handleLayoutChange}
-        onDrop={(_layout, item, _e) => {
+        onDragStart={(_layout, _oldItem, item) => {
+          draggingWidgetIdRef.current = item?.i ?? null
+        }}
+        onDragStop={() => {
+          draggingWidgetIdRef.current = null
+        }}
+        onDrop={(_layout, item, e) => {
+          if (!item) return
+
+          const transferRaw = e.dataTransfer?.getData(WIDGET_TRANSFER_MIME) ?? ''
+          const transferPayload = deserializeWidgetTransferPayload(transferRaw)
+          if (transferPayload) {
+            const widget: WidgetConfig = {
+              ...transferPayload.widget,
+              settings: {
+                ...(transferPayload.widget.settings ?? {}),
+              },
+            }
+
+            const minW = transferPayload.layout.minW ?? 3
+            const minH = transferPayload.layout.minH ?? getMinHeightForWidget(widget.type)
+
+            const layoutItem: LayoutItem = {
+              i: widget.id,
+              x: item.x,
+              y: item.y,
+              w: transferPayload.layout.w,
+              h: transferPayload.layout.h,
+              minW,
+              minH,
+            }
+
+            if (transferPayload.sourceClientId === WINDOW_CLIENT_ID) {
+              const sourceStore = useWorkspaceStore.getState()
+              sourceStore.removeWidget(transferPayload.sourceTabId, transferPayload.widget.id)
+            }
+
+            addWidget(tabIdRef.current, widget, layoutItem)
+
+            const channel = createPitwallChannel()
+            if (channel) {
+              channel.postMessage({
+                kind: 'widget-transfer-remove-source',
+                origin: WINDOW_CLIENT_ID,
+                sourceClientId: transferPayload.sourceClientId,
+                sourceTabId: transferPayload.sourceTabId,
+                widgetId: transferPayload.widget.id,
+              })
+              channel.close()
+            }
+            return
+          }
+
           const type = draggingType
           setDraggingType(null)
-          if (!type || !item) return
+          if (!type) return
+
           const defaults = WIDGET_DEFAULTS[type] ?? { w: 6, h: 6 }
           const id = crypto.randomUUID()
           const widget: WidgetConfig = { id, type, driverContext: 'FOCUS' }
@@ -247,37 +340,40 @@ export function Canvas({ tabId }: CanvasProps) {
       </GridLayout>
 
       {/* Add widget button */}
-      <button
-        onClick={() => setPickerOpen(true)}
-        aria-label="Add widget"
-        style={{
-          position: 'fixed',
-          bottom: 20,
-          right: 20,
-          zIndex: 100,
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          background: 'var(--red)',
-          border: 'none',
-          color: '#ffffff',
-          fontSize: 18,
-          lineHeight: 1,
-          cursor: 'pointer',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'opacity 0.12s',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-      >
-        +
-      </button>
+      {!hideAddWidget && (
+        <button
+          onClick={() => setPickerOpen(true)}
+          aria-label="Add widget"
+          className="interactive-button floating-pulse"
+          style={{
+            position: 'fixed',
+            bottom: 20,
+            right: 20,
+            zIndex: 320,
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: 'var(--red)',
+            border: 'none',
+            color: '#ffffff',
+            fontSize: 18,
+            lineHeight: 1,
+            cursor: 'pointer',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'opacity 0.12s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+        >
+          +
+        </button>
+      )}
 
       {/* Widget picker panel */}
-      {pickerOpen && (
+      {pickerOpen && !hideAddWidget && (
         <WidgetPicker onClose={() => setPickerOpen(false)} onAdd={handleAddWidget} />
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { DriverContext } from '../../store/workspaceStore'
 import { useDriverStore } from '../../store/driverStore'
 import { usePositions } from '../../hooks/usePositions'
@@ -24,6 +24,7 @@ function ContextChip({
   return (
     <button
       onClick={onClick}
+      className="interactive-chip"
       style={{
         padding: '4px 10px',
         borderRadius: 3,
@@ -56,17 +57,108 @@ function Divider() {
 }
 
 export function DriverTab({ value, onChange }: DriverTabProps) {
+  const STAR_EXIT_MS = 320
+  const STAR_ENTER_MS = 380
   const { drivers, starred, getTeamColor } = useDriverStore()
   const { data: positions } = usePositions()
   const [panelOpen, setPanelOpen] = useState(false)
+  const prevStarredRef = useRef(starred)
+  const [exitingStarred, setExitingStarred] = useState<number[]>([])
+  const [displayOrder, setDisplayOrder] = useState<number[]>(starred)
+  const [enteringStarred, setEnteringStarred] = useState<number[]>([])
+  const starredItemRefs = useRef(new Map<number, HTMLDivElement>())
+  const prevStarredItemRectsRef = useRef(new Map<number, DOMRect>())
 
-  const starredDrivers = starred
-    .map((num) => drivers.find((d) => d.driver_number === num))
-    .filter(Boolean)
+  useEffect(() => {
+    const removed = prevStarredRef.current.filter((num) => !starred.includes(num))
+    const added = starred.filter((num) => !prevStarredRef.current.includes(num))
+    if (removed.length > 0) {
+      setExitingStarred((prev) => Array.from(new Set([...prev, ...removed])))
+    }
+
+    if (added.length > 0) {
+      setEnteringStarred((prev) => Array.from(new Set([...prev, ...added])))
+    }
+
+    setDisplayOrder((prev) => {
+      const exitingNow = new Set([...exitingStarred, ...removed].filter((num) => !starred.includes(num)))
+      const next = prev.filter((num) => starred.includes(num) || exitingNow.has(num))
+      for (const num of starred) {
+        if (!next.includes(num)) next.push(num)
+      }
+      for (const num of exitingNow) {
+        if (!next.includes(num)) next.push(num)
+      }
+      return next
+    })
+
+    prevStarredRef.current = starred
+  }, [starred, exitingStarred])
+
+  useEffect(() => {
+    if (enteringStarred.length === 0) return
+    const timer = setTimeout(() => {
+      setEnteringStarred((prev) => prev.filter((num) => !starred.includes(num)))
+    }, STAR_ENTER_MS)
+    return () => clearTimeout(timer)
+  }, [enteringStarred, starred])
+
+  useEffect(() => {
+    if (exitingStarred.length === 0) return
+    const timer = setTimeout(() => {
+      setExitingStarred((prev) => prev.filter((num) => starred.includes(num)))
+    }, STAR_EXIT_MS)
+    return () => clearTimeout(timer)
+  }, [exitingStarred, starred])
+
+  const renderedStarredNumbers = useMemo(() => displayOrder, [displayOrder])
+  const starredLayoutKeys = useMemo(() => displayOrder, [displayOrder])
+
+  const starredDrivers = renderedStarredNumbers
+    .map((num) => {
+      const driver = drivers.find((d) => d.driver_number === num)
+      if (!driver) return null
+      return {
+        driver,
+        exiting: !starred.includes(num),
+      }
+    })
+    .filter((entry): entry is { driver: (typeof drivers)[number]; exiting: boolean } => Boolean(entry))
 
   function getPos(driverNumber: number): number | null {
     return positions?.find((p) => p.driver_number === driverNumber)?.position ?? null
   }
+
+  useLayoutEffect(() => {
+    if (exitingStarred.length > 0) return
+
+    const nextRects = new Map<number, DOMRect>()
+
+    for (const key of starredLayoutKeys) {
+      const el = starredItemRefs.current.get(key)
+      if (!el) continue
+      nextRects.set(key, el.getBoundingClientRect())
+    }
+
+    for (const [key, rect] of nextRects) {
+      const prevRect = prevStarredItemRectsRef.current.get(key)
+      const el = starredItemRefs.current.get(key)
+      if (!prevRect || !el) continue
+
+      const deltaX = prevRect.left - rect.left
+      const deltaY = prevRect.top - rect.top
+      if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) continue
+
+      el.style.transition = 'none'
+      el.style.transform = `translate(${deltaX}px, ${deltaY}px)`
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)'
+        el.style.transform = 'translate(0, 0)'
+      })
+    }
+
+    prevStarredItemRectsRef.current = nextRects
+  }, [starredLayoutKeys.join(','), exitingStarred.length])
 
   return (
     <>
@@ -123,60 +215,84 @@ export function DriverTab({ value, onChange }: DriverTabProps) {
 
         {/* Starred driver badges */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {starredDrivers.map((driver) => {
-            if (!driver) return null
+          {starredDrivers.map(({ driver, exiting }) => {
             const color = getTeamColor(driver.driver_number)
             const pinnedCtx: DriverContext = `PINNED:${driver.driver_number}`
             const isActive = value === pinnedCtx
             const pos = getPos(driver.driver_number)
+            const entering = !exiting && enteringStarred.includes(driver.driver_number)
 
             return (
-              <button
+              <div
                 key={driver.driver_number}
-                onClick={() => onChange(pinnedCtx)}
+                ref={(el) => {
+                  if (!el) {
+                    starredItemRefs.current.delete(driver.driver_number)
+                    return
+                  }
+                  starredItemRefs.current.set(driver.driver_number, el)
+                }}
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '4px 8px',
-                  borderRadius: 3,
-                  border: `0.5px solid ${isActive ? color : `${color}44`}`,
-                  background: isActive ? `${color}22` : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.12s',
+                  overflow: 'hidden',
+                  pointerEvents: exiting ? 'none' : 'auto',
                 }}
               >
-                <div style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: color,
-                  flexShrink: 0,
-                }} />
-                <span style={{
-                  fontFamily: 'var(--mono)',
-                  fontSize: 9,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: isActive ? 'var(--white)' : 'var(--muted)',
-                }}>
-                  {driver.name_acronym}
-                </span>
-                {pos != null && (
+                <button
+                  onClick={() => {
+                    if (exiting) return
+                    onChange(pinnedCtx)
+                  }}
+                  className={[
+                    'interactive-chip',
+                    entering ? 'animated-star-add' : '',
+                    exiting ? 'animated-star-remove' : '',
+                  ].filter(Boolean).join(' ')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '4px 8px',
+                    borderRadius: 3,
+                    border: `0.5px solid ${isActive ? color : `${color}44`}`,
+                    background: isActive ? `${color}22` : 'transparent',
+                    cursor: exiting ? 'default' : 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  <div style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: color,
+                    flexShrink: 0,
+                  }} />
                   <span style={{
                     fontFamily: 'var(--mono)',
-                    fontSize: 7,
-                    color: 'var(--muted2)',
+                    fontSize: 9,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: isActive ? 'var(--white)' : 'var(--muted)',
                   }}>
-                    P{pos}
+                    {driver.name_acronym}
                   </span>
-                )}
-              </button>
+                  {pos != null && (
+                    <span style={{
+                      fontFamily: 'var(--mono)',
+                      fontSize: 7,
+                      color: 'var(--muted2)',
+                    }}>
+                      P{pos}
+                    </span>
+                  )}
+                </button>
+              </div>
             )
           })}
 
           <button
             onClick={() => setPanelOpen(true)}
+            className="interactive-button"
             style={{
               padding: '4px 8px',
               borderRadius: 3,

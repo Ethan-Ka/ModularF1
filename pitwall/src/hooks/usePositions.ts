@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchPositions } from '../api/openf1'
 import { useSessionStore } from '../store/sessionStore'
 import type { OpenF1Position } from '../api/openf1'
+import { queryModePolicy } from './queryModePolicy'
 
 // Returns latest position per driver
 export function usePositions() {
@@ -22,8 +23,10 @@ export function usePositions() {
       return Array.from(map.values()).sort((a, b) => a.position - b.position)
     },
     enabled: !!sessionKey,
-    staleTime: 3_000,
-    refetchInterval: mode === 'live' ? 5_000 : false,
+    ...queryModePolicy(mode, {
+      staleTime: 3_000,
+      refetchInterval: 5_000,
+    }),
     retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
   })
 }

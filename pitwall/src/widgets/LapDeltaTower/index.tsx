@@ -2,6 +2,7 @@ import { usePositions } from '../../hooks/usePositions'
 import { useIntervals } from '../../hooks/useIntervals'
 import { useLaps } from '../../hooks/useLaps'
 import { useDriverStore } from '../../store/driverStore'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
 
 interface LapDeltaTowerProps {
   widgetId: string
@@ -35,6 +36,7 @@ export function LapDeltaTower({ widgetId: _ }: LapDeltaTowerProps) {
   const { data: intervals } = useIntervals()
   const { data: laps } = useLaps()
   const { getDriver, getTeamColor } = useDriverStore()
+  const refreshFade = useRefreshFade([positions, intervals, laps])
 
   // Build interval map
   const intervalMap = new Map(intervals?.map((i) => [i.driver_number, i]) ?? [])
@@ -53,7 +55,9 @@ export function LapDeltaTower({ widgetId: _ }: LapDeltaTowerProps) {
   const rows = positions ?? []
 
   return (
-    <div style={{
+    <div
+      className={refreshFade ? 'data-refresh-fade' : undefined}
+      style={{
       width: '100%',
       height: '100%',
       display: 'flex',

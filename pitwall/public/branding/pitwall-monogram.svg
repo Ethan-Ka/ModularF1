@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="PITWALL monogram">
+  <title>PITWALL monogram</title>
+  <style>
+    @font-face {
+      font-family: 'Barlow Condensed Local';
+      src: url('./fonts/BarlowCondensed-ExtraBold.ttf') format('truetype');
+      font-style: normal;
+      font-weight: 800;
+      font-display: block;
+    }
+    .m { font-family: 'Barlow Condensed Local', 'Barlow Condensed', 'Arial Narrow', sans-serif; font-weight: 800; letter-spacing: -0.02em; text-anchor: middle; }
+  </style>
+  <rect width="256" height="256" fill="#0B0B0C"/>
+  <text class="m" x="128" y="202" font-size="212" fill="#F2F0EB">P<tspan fill="#E8132B">W</tspan></text>
+</svg>

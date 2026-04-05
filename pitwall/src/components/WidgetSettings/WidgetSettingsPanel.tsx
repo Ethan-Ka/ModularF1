@@ -1,11 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../../store/workspaceStore'
 import { DriverTab } from './DriverTab'
 import { FormulaTab } from './FormulaTab'
 import type { DriverContext } from '../../store/workspaceStore'
 
 // Widget types that expose a formula tab
-const INFERRED_WIDGET_TYPES = ['TyreIntelligence']
+const INFERRED_WIDGET_TYPES = [
+  'TyreIntelligence',
+  'StintPaceComparison',
+  'ERSMicroSectors',
+  'DRSEfficiency',
+  'EngineModeTracker',
+  'DegRateGraph',
+  'PitWindowUrgency',
+  'UndercutSimulator',
+  'ChampionshipCalculator',
+  'CarVisualization',
+]
 
 // Default formula for TyreIntelligence
 const TYRE_DEFAULT_FORMULA =
@@ -23,7 +34,24 @@ interface WidgetSettingsPanelProps {
 }
 
 export function WidgetSettingsPanel({ widgetId, onClose }: WidgetSettingsPanelProps) {
+  const EXIT_MS = 220
   const [activeTab, setActiveTab] = useState<TabId>('display')
+  const [isClosing, setIsClosing] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleRequestClose() {
+    if (isClosing) return
+    setIsClosing(true)
+    closeTimerRef.current = setTimeout(() => {
+      onClose()
+    }, EXIT_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
 
   const tabs = useWorkspaceStore((s) => s.tabs)
   const updateWidgetConfig = useWorkspaceStore((s) => s.updateWidgetConfig)
@@ -77,7 +105,7 @@ export function WidgetSettingsPanel({ widgetId, onClose }: WidgetSettingsPanelPr
 
   return (
     // Overlay (doesn't close on click — use the × button)
-    <div style={{
+    <div className={isClosing ? 'animated-slide-right-exit' : 'animated-slide-right'} style={{
       position: 'fixed',
       top: 0,
       right: 0,
@@ -121,7 +149,8 @@ export function WidgetSettingsPanel({ widgetId, onClose }: WidgetSettingsPanelPr
             {widgetConfig.type}
           </span>
           <button
-            onClick={onClose}
+            onClick={handleRequestClose}
+            className="interactive-button"
             style={{
               background: 'none',
               border: 'none',
@@ -139,12 +168,12 @@ export function WidgetSettingsPanel({ widgetId, onClose }: WidgetSettingsPanelPr
 
         {/* Tab bar */}
         <div style={{ display: 'flex' }}>
-          <button style={tabStyle('display')} onClick={() => setActiveTab('display')}>Display</button>
-          <button style={tabStyle('driver')} onClick={() => setActiveTab('driver')}>Driver</button>
+          <button className="interactive-chip" style={tabStyle('display')} onClick={() => setActiveTab('display')}>Display</button>
+          <button className="interactive-chip" style={tabStyle('driver')} onClick={() => setActiveTab('driver')}>Driver</button>
           {isInferred && (
-            <button style={tabStyle('formula')} onClick={() => setActiveTab('formula')}>Formula</button>
+            <button className="interactive-chip" style={tabStyle('formula')} onClick={() => setActiveTab('formula')}>Formula</button>
           )}
-          <button style={tabStyle('advanced')} onClick={() => setActiveTab('advanced')}>Advanced</button>
+          <button className="interactive-chip" style={tabStyle('advanced')} onClick={() => setActiveTab('advanced')}>Advanced</button>
         </div>
       </div>
 

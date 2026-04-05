@@ -37,7 +37,13 @@ export interface OpenF1Driver {
   full_name: string
   team_name: string
   team_colour: string
+  nationality?: string
+  country_code?: string
   headshot_url?: string
+  flag_url?: string
+  number_svg_url?: string
+  number_text_color?: string
+  number_outline_color?: string
   session_key: number
 }
 

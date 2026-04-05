@@ -3,6 +3,7 @@ import { useLaps } from '../../hooks/useLaps'
 import { useWeather } from '../../hooks/useWeather'
 import { useWidgetDriver } from '../../hooks/useWidgetDriver'
 import { useWorkspaceStore } from '../../store/workspaceStore'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
 
 interface TyreIntelligenceProps {
   widgetId: string
@@ -56,6 +57,7 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
   const { data: stints } = useStints(driverNumber ?? undefined)
   const { data: laps } = useLaps(driverNumber ?? undefined)
   const { data: weatherAll } = useWeather()
+  const refreshFade = useRefreshFade([driverNumber, stints, laps, weatherAll])
 
   const latestWeather = weatherAll?.[weatherAll.length - 1]
   const trackTemp = latestWeather?.track_temperature ?? 45
@@ -117,7 +119,9 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
     `CLIFF = stint_start + BASE_WINDOW[${compound}]\n  − (track_temp−45)×0.3\n  − deg_rate×1.8\n  + sc_laps×2.1`
 
   return (
-    <div style={{
+    <div
+      className={refreshFade ? 'data-refresh-fade' : undefined}
+      style={{
       width: '100%',
       height: '100%',
       display: 'flex',

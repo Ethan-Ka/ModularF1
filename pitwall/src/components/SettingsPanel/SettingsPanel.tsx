@@ -1,11 +1,105 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSessionStore } from '../../store/sessionStore'
 import { useAmbientStore } from '../../store/ambientStore'
 import { useWorkspaceStore } from '../../store/workspaceStore'
+import { useDriverStore } from '../../store/driverStore'
+import { useLogStore } from '../../store/logStore'
+import { DriverManagerPanel } from '../DriverManager/DriverManagerPanel'
+import {
+  createPitwallEnvelope,
+  makePitwallFileName,
+  parsePitwallFile,
+  stringifyPitwallFile,
+  type PitwallFileKind,
+  type SettingsSnapshot,
+  type SeasonSnapshot,
+  type WorkspaceSnapshot,
+} from '../../lib/pitwallFiles'
+import { APP_VERSION_LABEL } from '../../lib/appMeta'
 
 interface SettingsPanelProps {
   onClose: () => void
+}
+
+const EXPORT_KIND_OPTIONS: Array<{ kind: PitwallFileKind; label: string }> = [
+  { kind: 'bundle', label: 'Full bundle' },
+  { kind: 'settings', label: 'Settings only' },
+  { kind: 'season', label: 'Season data only' },
+  { kind: 'workspace', label: 'Workspace only' },
+]
+
+const STATUS_COLOR: Record<'ok' | 'error' | 'info', string> = {
+  ok: 'var(--green)',
+  error: 'var(--red)',
+  info: 'var(--muted2)',
+}
+
+function applySettingsSnapshot(snapshot: SettingsSnapshot) {
+  useSessionStore.setState({
+    apiKey: snapshot.session.apiKey,
+    mode: snapshot.session.mode,
+    apiRequestsEnabled: snapshot.session.apiRequestsEnabled,
+  })
+
+  useAmbientStore.setState({
+    leaderColorMode: snapshot.ambient.leaderColorMode,
+    ambientLayerEnabled: snapshot.ambient.ambientLayerEnabled,
+    ambientLayerIntensity: snapshot.ambient.ambientLayerIntensity,
+    ambientLayerWaveEnabled: snapshot.ambient.ambientLayerWaveEnabled,
+  })
+
+  useDriverStore.setState({
+    starred: snapshot.driver.starred,
+    canvasFocus: snapshot.driver.canvasFocus,
+    windowFocusSelector: snapshot.driver.windowFocusSelector,
+  })
+}
+
+function applySeasonSnapshot(snapshot: SeasonSnapshot) {
+  useDriverStore.setState({
+    seasonYear: snapshot.seasonYear,
+    drivers: snapshot.drivers,
+    teamColors: snapshot.teamColors,
+    teamColorOverrides: snapshot.teamColorOverrides ?? {},
+    teamLogos: snapshot.teamLogos,
+  })
+}
+
+function applyWorkspaceSnapshot(snapshot: WorkspaceSnapshot) {
+  if (snapshot.tabs.length === 0) {
+    throw new Error('Workspace file has no tabs.')
+  }
+
+  const hasActiveTab = snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
+  useWorkspaceStore.setState({
+    tabs: snapshot.tabs,
+    activeTabId: hasActiveTab ? snapshot.activeTabId : snapshot.tabs[0].id,
+  })
+}
+
+async function readPitwallFileFromPicker(): Promise<{ fileName: string; contents: string } | null> {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.pitwall'
+
+  return new Promise((resolve) => {
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) {
+        resolve(null)
+        return
+      }
+
+      try {
+        const contents = await file.text()
+        resolve({ fileName: file.name, contents })
+      } catch {
+        resolve(null)
+      }
+    }
+    input.click()
+  })
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -49,6 +143,7 @@ function ActionButton({
     <button
       onClick={onClick}
       disabled={disabled}
+      className="interactive-button"
       style={{
         padding: '5px 12px',
         borderRadius: 3,
@@ -69,22 +164,139 @@ function ActionButton({
   )
 }
 
+function ToggleSelector({
+  checked,
+  onChange,
+  ariaLabel,
+  disabled = false,
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  ariaLabel: string
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      className="interactive-chip"
+      onClick={() => onChange(!checked)}
+      onKeyDown={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault()
+          onChange(!checked)
+        }
+      }}
+      style={{
+        width: 42,
+        height: 18,
+        borderRadius: 9,
+        border: `0.5px solid ${checked ? 'var(--green)' : 'var(--border2)'}`,
+        background: checked ? 'rgba(46,204,113,0.22)' : 'var(--bg4)',
+        position: 'relative',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'border-color var(--motion-base) ease, background-color var(--motion-base) ease, opacity var(--motion-fast) ease',
+        flexShrink: 0,
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: 2,
+          width: 14,
+          height: 14,
+          borderRadius: '50%',
+          background: checked ? 'var(--bg2)' : 'var(--muted2)',
+          transform: `translateX(${checked ? 24 : 0}px)`,
+          transition: 'transform var(--motion-base) var(--motion-spring), background-color var(--motion-fast) ease',
+          boxShadow: checked ? '0 0 0 1px rgba(46,204,113,0.35)' : 'none',
+        }}
+      />
+    </button>
+  )
+}
+
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { mode, apiKey, clearApiKey } = useSessionStore()
-  const { leaderColorMode, flagState, setLeaderColorMode } = useAmbientStore()
-  // TODO: resetToDefault does not yet exist on workspaceStore — disabled until implemented
-  const workspaceResetExists = 'resetToDefault' in useWorkspaceStore.getState()
+  const EXIT_MS = 220
+  const API_REVEAL_EXIT_MS = 180
+  const { mode, apiKey, clearApiKey, apiRequestsEnabled, setApiRequestsEnabled } = useSessionStore()
+  const {
+    leaderColorMode,
+    flagState,
+    ambientLayerEnabled,
+    ambientLayerIntensity,
+    ambientLayerWaveEnabled,
+    setLeaderColorMode,
+    setAmbientLayerEnabled,
+    setAmbientLayerIntensity,
+    setAmbientLayerWaveEnabled,
+  } = useAmbientStore()
+  const { resetToDefault } = useWorkspaceStore()
+  const starredCount = useDriverStore((s) => s.starred.length)
+  const seasonYear = useDriverStore((s) => s.seasonYear)
+  const logEntries = useLogStore((s) => s.entries)
+  const clearLogs = useLogStore((s) => s.clear)
 
   const [apiKeyInputOpen, setApiKeyInputOpen] = useState(false)
   const [apiKeyDraft, setApiKeyDraft] = useState('')
+  const [exportBaseName, setExportBaseName] = useState('pitwall')
+  const [exportKind, setExportKind] = useState<PitwallFileKind>('bundle')
+  const [ioBusy, setIoBusy] = useState(false)
+  const [driverManagerOpen, setDriverManagerOpen] = useState(false)
+  const [ioStatus, setIoStatus] = useState<{ tone: 'ok' | 'error' | 'info'; text: string } | null>(null)
+  const [isClosing, setIsClosing] = useState(false)
+  const [apiKeyInputClosing, setApiKeyInputClosing] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const apiKeyCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { setApiKey } = useSessionStore()
+
+  function handleRequestClose() {
+    if (isClosing) return
+    setIsClosing(true)
+    closeTimerRef.current = setTimeout(() => {
+      onClose()
+    }, EXIT_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+      if (apiKeyCloseTimerRef.current) clearTimeout(apiKeyCloseTimerRef.current)
+    }
+  }, [])
+
+  function openApiKeyInput() {
+    if (apiKeyCloseTimerRef.current) {
+      clearTimeout(apiKeyCloseTimerRef.current)
+      apiKeyCloseTimerRef.current = null
+    }
+    setApiKeyInputClosing(false)
+    setApiKeyInputOpen(true)
+  }
+
+  function closeApiKeyInput(resetDraft = true) {
+    if (!apiKeyInputOpen) return
+    if (apiKeyInputClosing) return
+    setApiKeyInputClosing(true)
+    apiKeyCloseTimerRef.current = setTimeout(() => {
+      setApiKeyInputOpen(false)
+      setApiKeyInputClosing(false)
+      if (resetDraft) setApiKeyDraft('')
+    }, API_REVEAL_EXIT_MS)
+  }
 
   function handleAddApiKey() {
     if (apiKeyDraft.trim()) {
       setApiKey(apiKeyDraft.trim())
       setApiKeyDraft('')
-      setApiKeyInputOpen(false)
+      closeApiKeyInput(false)
     }
   }
 
@@ -92,9 +304,164 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     return key.slice(0, 8) + '•••••'
   }
 
+  function exportDiagnostics() {
+    const timestamp = new Date().toISOString().replace(/[.:]/g, '-')
+    const blob = new Blob([JSON.stringify(logEntries, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `pitwall-log-${timestamp}.json`
+    document.body.append(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  function buildSettingsSnapshot(): SettingsSnapshot {
+    const session = useSessionStore.getState()
+    const ambient = useAmbientStore.getState()
+    const driver = useDriverStore.getState()
+    return {
+      session: {
+        apiKey: session.apiKey,
+        mode: session.mode,
+        apiRequestsEnabled: session.apiRequestsEnabled,
+      },
+      ambient: {
+        leaderColorMode: ambient.leaderColorMode,
+        ambientLayerEnabled: ambient.ambientLayerEnabled,
+        ambientLayerIntensity: ambient.ambientLayerIntensity,
+        ambientLayerWaveEnabled: ambient.ambientLayerWaveEnabled,
+      },
+      driver: {
+        starred: driver.starred,
+        canvasFocus: driver.canvasFocus,
+        windowFocusSelector: driver.windowFocusSelector,
+      },
+    }
+  }
+
+  function buildSeasonSnapshot(): SeasonSnapshot {
+    const driver = useDriverStore.getState()
+    return {
+      seasonYear: driver.seasonYear,
+      drivers: driver.drivers,
+      teamColors: driver.teamColors,
+      teamColorOverrides: driver.teamColorOverrides,
+      teamLogos: driver.teamLogos,
+    }
+  }
+
+  function buildWorkspaceSnapshot(): WorkspaceSnapshot {
+    const workspace = useWorkspaceStore.getState()
+    return {
+      activeTabId: workspace.activeTabId,
+      tabs: workspace.tabs,
+    }
+  }
+
+  function buildEnvelopeByKind(kind: PitwallFileKind) {
+    if (kind === 'settings') return createPitwallEnvelope('settings', buildSettingsSnapshot())
+    if (kind === 'season') return createPitwallEnvelope('season', buildSeasonSnapshot())
+    if (kind === 'workspace') return createPitwallEnvelope('workspace', buildWorkspaceSnapshot())
+    return createPitwallEnvelope('bundle', {
+      settings: buildSettingsSnapshot(),
+      season: buildSeasonSnapshot(),
+      workspace: buildWorkspaceSnapshot(),
+    })
+  }
+
+  async function handleExportPitwall() {
+    setIoBusy(true)
+    setIoStatus(null)
+
+    try {
+      const envelope = buildEnvelopeByKind(exportKind)
+      const defaultName = makePitwallFileName(exportBaseName, exportKind)
+      const contents = stringifyPitwallFile(envelope)
+
+      if (window.electronAPI?.savePitwallFile) {
+        const result = await window.electronAPI.savePitwallFile({ defaultName, contents })
+        if (result.canceled) {
+          setIoStatus({ tone: 'info', text: 'Export canceled.' })
+          return
+        }
+        setIoStatus({ tone: 'ok', text: `Exported ${exportKind} file to ${result.filePath ?? defaultName}.` })
+        return
+      }
+
+      const blob = new Blob([contents], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = defaultName
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+
+      setIoStatus({ tone: 'ok', text: `Exported ${exportKind} file as ${defaultName}.` })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown export error.'
+      setIoStatus({ tone: 'error', text: `Export failed: ${message}` })
+    } finally {
+      setIoBusy(false)
+    }
+  }
+
+  async function handleImportPitwall() {
+    setIoBusy(true)
+    setIoStatus(null)
+
+    try {
+      let fileName = 'imported.pitwall'
+      let contents: string | null = null
+
+      if (window.electronAPI?.openPitwallFile) {
+        const result = await window.electronAPI.openPitwallFile()
+        if (result.canceled) {
+          setIoStatus({ tone: 'info', text: 'Import canceled.' })
+          return
+        }
+        fileName = result.filePath ?? fileName
+        contents = result.contents ?? null
+      } else {
+        const picked = await readPitwallFileFromPicker()
+        if (!picked) {
+          setIoStatus({ tone: 'info', text: 'Import canceled.' })
+          return
+        }
+        fileName = picked.fileName
+        contents = picked.contents
+      }
+
+      if (!contents) {
+        throw new Error('No file contents were read.')
+      }
+
+      const envelope = parsePitwallFile(contents)
+      if (envelope.kind === 'settings') applySettingsSnapshot(envelope.payload)
+      if (envelope.kind === 'season') applySeasonSnapshot(envelope.payload)
+      if (envelope.kind === 'workspace') applyWorkspaceSnapshot(envelope.payload)
+      if (envelope.kind === 'bundle') {
+        applySettingsSnapshot(envelope.payload.settings)
+        applySeasonSnapshot(envelope.payload.season)
+        applyWorkspaceSnapshot(envelope.payload.workspace)
+      }
+
+      setIoStatus({ tone: 'ok', text: `Imported ${envelope.kind} file from ${fileName}.` })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown import error.'
+      setIoStatus({ tone: 'error', text: `Import failed: ${message}` })
+    } finally {
+      setIoBusy(false)
+    }
+  }
+
   return createPortal(
     <div
-      onClick={onClose}
+      onClick={handleRequestClose}
+      className={isClosing ? 'glass-overlay glass-overlay-exit' : 'glass-overlay'}
       style={{
         position: 'fixed',
         inset: 0,
@@ -109,6 +476,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       {/* Panel */}
       <div
         onClick={(e) => e.stopPropagation()}
+        className={isClosing ? 'modal-panel modal-panel-exit' : 'modal-panel'}
         style={{
           width: 520,
           maxHeight: 'calc(100vh - 120px)',
@@ -138,7 +506,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             Settings
           </span>
           <button
-            onClick={onClose}
+            onClick={handleRequestClose}
             style={{
               background: 'none',
               border: 'none',
@@ -155,7 +523,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         </div>
 
         {/* Body */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px' }}>
+        <div className="scroll-fade" style={{ overflowY: 'auto', flex: 1, padding: '0 16px' }}>
 
           {/* Account & Mode */}
           <Section>
@@ -220,18 +588,21 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 </span>
 
                 {!apiKeyInputOpen ? (
-                  <ActionButton onClick={() => setApiKeyInputOpen(true)}>
+                  <ActionButton onClick={openApiKeyInput}>
                     Add API key for live mode
                   </ActionButton>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div
+                    className={apiKeyInputClosing ? 'animated-slide-down-exit' : 'reveal-grow'}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+                  >
                     <input
                       type="text"
                       value={apiKeyDraft}
                       onChange={(e) => setApiKeyDraft(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleAddApiKey()
-                        if (e.key === 'Escape') setApiKeyInputOpen(false)
+                        if (e.key === 'Escape') closeApiKeyInput()
                       }}
                       placeholder="Enter OpenF1 API key..."
                       autoFocus
@@ -249,7 +620,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                     />
                     <div style={{ display: 'flex', gap: 8 }}>
                       <ActionButton onClick={handleAddApiKey}>Save key</ActionButton>
-                      <ActionButton onClick={() => { setApiKeyInputOpen(false); setApiKeyDraft('') }}>
+                      <ActionButton onClick={() => closeApiKeyInput()}>
                         Cancel
                       </ActionButton>
                     </div>
@@ -271,35 +642,11 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 gap: 10,
                 cursor: 'pointer',
               }}>
-                <div
-                  onClick={() => setLeaderColorMode(!leaderColorMode)}
-                  role="checkbox"
-                  aria-checked={leaderColorMode}
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') setLeaderColorMode(!leaderColorMode) }}
-                  style={{
-                    width: 28,
-                    height: 14,
-                    borderRadius: 7,
-                    background: leaderColorMode ? 'var(--green)' : 'var(--bg4)',
-                    border: `0.5px solid ${leaderColorMode ? 'var(--green)' : 'var(--border2)'}`,
-                    position: 'relative',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute',
-                    top: 2,
-                    left: leaderColorMode ? 14 : 2,
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    background: leaderColorMode ? 'var(--bg)' : 'var(--muted2)',
-                    transition: 'left 0.15s',
-                  }} />
-                </div>
+                <ToggleSelector
+                  checked={leaderColorMode}
+                  onChange={setLeaderColorMode}
+                  ariaLabel="Leader color mode"
+                />
                 <span style={{
                   fontFamily: 'var(--mono)',
                   fontSize: 9,
@@ -331,30 +678,248 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   {flagState}
                 </span>
               </div>
+
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}>
+                <span style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: 9,
+                  color: 'var(--muted)',
+                  letterSpacing: '0.06em',
+                  userSelect: 'none',
+                }}>
+                  Ambient layer enabled
+                </span>
+                <ToggleSelector
+                  checked={ambientLayerEnabled}
+                  onChange={setAmbientLayerEnabled}
+                  ariaLabel="Ambient layer enabled"
+                />
+              </label>
+
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}>
+                <span style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: 9,
+                  color: ambientLayerEnabled ? 'var(--muted)' : 'var(--muted2)',
+                  letterSpacing: '0.06em',
+                  userSelect: 'none',
+                }}>
+                  Wave animation
+                </span>
+                <ToggleSelector
+                  checked={ambientLayerWaveEnabled}
+                  onChange={setAmbientLayerWaveEnabled}
+                  disabled={!ambientLayerEnabled}
+                  ariaLabel="Wave animation"
+                />
+              </label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{
+                    fontFamily: 'var(--mono)',
+                    fontSize: 9,
+                    color: ambientLayerEnabled ? 'var(--muted)' : 'var(--muted2)',
+                    letterSpacing: '0.06em',
+                  }}>
+                    Ambient intensity
+                  </span>
+                  <span style={{
+                    fontFamily: 'var(--mono)',
+                    fontSize: 8,
+                    color: 'var(--muted2)',
+                    letterSpacing: '0.08em',
+                  }}>
+                    {ambientLayerIntensity}%
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {([25, 50, 75, 100] as const).map((pct) => {
+                    const active = ambientLayerIntensity === pct
+                    return (
+                      <button
+                        key={pct}
+                        type="button"
+                        className="interactive-chip"
+                        onClick={() => setAmbientLayerIntensity(pct)}
+                        disabled={!ambientLayerEnabled}
+                        style={{
+                          minWidth: 42,
+                          padding: '3px 9px',
+                          borderRadius: 3,
+                          border: `0.5px solid ${active ? 'var(--border3)' : 'var(--border)'}`,
+                          background: active ? 'var(--bg4)' : 'transparent',
+                          fontFamily: 'var(--mono)',
+                          fontSize: 8,
+                          letterSpacing: '0.08em',
+                          color: !ambientLayerEnabled ? 'var(--muted2)' : active ? 'var(--white)' : 'var(--muted)',
+                          cursor: ambientLayerEnabled ? 'pointer' : 'not-allowed',
+                          opacity: ambientLayerEnabled ? 1 : 0.55,
+                        }}
+                      >
+                        {pct}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* Data Layer */}
+          <Section>
+            <SectionLabel>Data Layer</SectionLabel>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}>
+                <span style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: 9,
+                  color: 'var(--muted)',
+                  letterSpacing: '0.06em',
+                  userSelect: 'none',
+                }}>
+                  Enable OpenF1 API polling
+                </span>
+                <ToggleSelector
+                  checked={apiRequestsEnabled}
+                  onChange={setApiRequestsEnabled}
+                  ariaLabel="Enable OpenF1 API polling"
+                />
+              </label>
+
+              <span style={{
+                fontFamily: 'var(--mono)',
+                fontSize: 8,
+                letterSpacing: '0.06em',
+                color: apiRequestsEnabled ? 'var(--green)' : 'var(--amber)',
+              }}>
+                {apiRequestsEnabled
+                  ? 'Polling active. Live and historical fetch hooks can request new data.'
+                  : 'Polling paused. Existing cached data remains visible until re-enabled.'}
+              </span>
+            </div>
+          </Section>
+
+          {/* Drivers */}
+          <Section>
+            <SectionLabel>Drivers</SectionLabel>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span style={{
+                fontFamily: 'var(--mono)',
+                fontSize: 8,
+                letterSpacing: '0.08em',
+                color: 'var(--muted2)',
+              }}>
+                {starredCount} starred drivers{seasonYear ? ` · ${seasonYear} season` : ''}
+              </span>
+              <ActionButton onClick={() => setDriverManagerOpen(true)}>
+                Open driver manager
+              </ActionButton>
             </div>
           </Section>
 
           {/* Workspace */}
           <Section>
             <SectionLabel>Workspace</SectionLabel>
-            {/* TODO: resetToDefault not yet implemented on workspaceStore */}
-            <ActionButton
-              disabled={!workspaceResetExists}
-              onClick={workspaceResetExists ? () => (useWorkspaceStore.getState() as any).resetToDefault() : undefined}
-            >
-              Reset workspace to default
-            </ActionButton>
-            {!workspaceResetExists && (
-              <p style={{
-                fontFamily: 'var(--mono)',
-                fontSize: 8,
-                color: 'var(--muted2)',
-                letterSpacing: '0.06em',
-                marginTop: 8,
-              }}>
-                Reset not available yet
-              </p>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <ActionButton onClick={resetToDefault}>
+                Reset workspace to default
+              </ActionButton>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <span style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: 8,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--muted2)',
+                }}>
+                  Import / Export (.pitwall)
+                </span>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={exportBaseName}
+                    onChange={(e) => setExportBaseName(e.target.value)}
+                    placeholder="File name"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      background: 'var(--bg4)',
+                      border: '0.5px solid var(--border2)',
+                      borderRadius: 3,
+                      padding: '6px 10px',
+                      fontFamily: 'var(--mono)',
+                      fontSize: 9,
+                      color: 'var(--white)',
+                      letterSpacing: '0.05em',
+                      outline: 'none',
+                    }}
+                  />
+                  <select
+                    value={exportKind}
+                    onChange={(e) => setExportKind(e.target.value as PitwallFileKind)}
+                    style={{
+                      width: 148,
+                      background: 'var(--bg4)',
+                      border: '0.5px solid var(--border2)',
+                      borderRadius: 3,
+                      padding: '6px 8px',
+                      fontFamily: 'var(--mono)',
+                      fontSize: 9,
+                      color: 'var(--muted)',
+                      letterSpacing: '0.04em',
+                      outline: 'none',
+                    }}
+                  >
+                    {EXPORT_KIND_OPTIONS.map((option) => (
+                      <option key={option.kind} value={option.kind}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <ActionButton onClick={handleExportPitwall} disabled={ioBusy}>
+                    Export {exportKind}
+                  </ActionButton>
+                  <ActionButton onClick={handleImportPitwall} disabled={ioBusy}>
+                    Import .pitwall
+                  </ActionButton>
+                </div>
+
+                <span style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: 8,
+                  letterSpacing: '0.06em',
+                  color: ioStatus ? STATUS_COLOR[ioStatus.tone] : 'var(--muted2)',
+                  minHeight: 12,
+                }}>
+                  {ioStatus
+                    ? ioStatus.text
+                    : `Exported files are named like ${makePitwallFileName(exportBaseName || 'pitwall', exportKind)}.`}
+                </span>
+              </div>
+            </div>
           </Section>
 
           {/* About */}
@@ -367,7 +932,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 color: 'var(--muted)',
                 letterSpacing: '0.06em',
               }}>
-                Pitwall v0.1.0-alpha
+                Pitwall {APP_VERSION_LABEL}
               </span>
               <span style={{
                 fontFamily: 'var(--mono)',
@@ -380,7 +945,32 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
           </Section>
 
+          {/* Diagnostics */}
+          <Section>
+            <SectionLabel>Diagnostics</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span style={{
+                fontFamily: 'var(--mono)',
+                fontSize: 8,
+                color: 'var(--muted2)',
+                letterSpacing: '0.08em',
+              }}>
+                {logEntries.length} log entries in memory (max 1000)
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <ActionButton onClick={exportDiagnostics} disabled={logEntries.length === 0}>
+                  Export logs
+                </ActionButton>
+                <ActionButton variant="danger" onClick={clearLogs} disabled={logEntries.length === 0}>
+                  Clear logs
+                </ActionButton>
+              </div>
+            </div>
+          </Section>
+
         </div>
+
+        {driverManagerOpen && <DriverManagerPanel onClose={() => setDriverManagerOpen(false)} />}
       </div>
     </div>,
     document.body

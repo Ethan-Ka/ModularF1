@@ -1,0 +1,58 @@
+[
+  {
+    "team": "ferrari",
+    "chassis": "Ferrari 678",
+    "powerUnit": "Ferrari",
+    "notes": "2026 regulation-era baseline"
+  },
+  {
+    "team": "mclaren",
+    "chassis": "McLaren MCL40",
+    "powerUnit": "Mercedes"
+  },
+  {
+    "team": "red_bull",
+    "chassis": "Red Bull RB22",
+    "powerUnit": "Ford Red Bull Powertrains"
+  },
+  {
+    "team": "mercedes",
+    "chassis": "Mercedes W17",
+    "powerUnit": "Mercedes"
+  },
+  {
+    "team": "aston_martin",
+    "chassis": "Aston Martin AMR26",
+    "powerUnit": "Honda RBPT"
+  },
+  {
+    "team": "alpine",
+    "chassis": "Alpine A526",
+    "powerUnit": "Renault"
+  },
+  {
+    "team": "rb",
+    "chassis": "Racing Bulls VCARB 03",
+    "powerUnit": "Honda RBPT"
+  },
+  {
+    "team": "williams",
+    "chassis": "Williams FW48",
+    "powerUnit": "Mercedes"
+  },
+  {
+    "team": "haas",
+    "chassis": "Haas VF-26",
+    "powerUnit": "Ferrari"
+  },
+  {
+    "team": "audi",
+    "chassis": "Audi A26",
+    "powerUnit": "Audi"
+  },
+  {
+    "team": "cadillac",
+    "chassis": "Cadillac C26",
+    "powerUnit": "Ferrari"
+  }
+]

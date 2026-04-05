@@ -33,15 +33,16 @@ function LevelBadge({ level }: { level: LogLevel }) {
   )
 }
 
-function LogRow({ entry }: { entry: LogEntry }) {
+function LogRow({ entry, index }: { entry: LogEntry; index: number }) {
   return (
-    <div style={{
+    <div className="stagger-item" style={{
       display: 'flex',
       alignItems: 'baseline',
       gap: 8,
       padding: '3px 12px',
       borderBottom: '0.5px solid var(--border)',
       minHeight: 22,
+      ['--stagger-delay' as string]: `${Math.min(index * 8, 160)}ms`,
     }}>
       <span style={{
         fontFamily: 'var(--mono)',
@@ -289,11 +290,37 @@ function DevPanel() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
+  const EXIT_MS = 220
   const entries = useLogStore((s) => s.entries)
   const clear = useLogStore((s) => s.clear)
   const [activeFilters, setActiveFilters] = useState<Set<LogLevel>>(new Set(ALL_LEVELS))
   const [devOpen, setDevOpen] = useState(false)
+  const [isPresent, setIsPresent] = useState(open)
+  const [isClosing, setIsClosing] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+      setIsPresent(true)
+      setIsClosing(false)
+      return
+    }
+
+    if (!isPresent) return
+    setIsClosing(true)
+    closeTimerRef.current = setTimeout(() => {
+      setIsPresent(false)
+      setIsClosing(false)
+    }, EXIT_MS)
+  }, [open, isPresent])
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
 
   // Auto-scroll to bottom on new entries
   useEffect(() => {
@@ -302,7 +329,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
     }
   }, [entries, open])
 
-  if (!open) return null
+  if (!isPresent) return null
 
   function toggleFilter(level: LogLevel) {
     setActiveFilters((prev) => {
@@ -327,7 +354,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
   const filtered = entries.filter((e) => activeFilters.has(e.level))
 
   return (
-    <div style={{
+    <div className={isClosing ? 'animated-slide-down-exit' : 'animated-slide-down'} style={{
       position: 'fixed',
       left: 0,
       right: 0,
@@ -370,6 +397,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
           <button
             key={level}
             onClick={() => toggleFilter(level)}
+            className="interactive-button"
             style={{
               background: activeFilters.has(level) ? `${LEVEL_COLORS[level]}22` : 'transparent',
               border: `0.5px solid ${activeFilters.has(level) ? LEVEL_COLORS[level] : 'var(--border)'}`,
@@ -392,6 +420,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
         {/* DEV toggle */}
         <button
           onClick={() => setDevOpen((v) => !v)}
+          className="interactive-button"
           style={{
             background: devOpen ? 'rgba(139,92,246,0.15)' : 'none',
             border: `0.5px solid ${devOpen ? 'var(--purple)' : 'var(--border)'}`,
@@ -412,6 +441,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
         {/* Export JSON */}
         <button
           onClick={exportJson}
+          className="interactive-button"
           style={{
             background: 'none',
             border: '0.5px solid var(--border)',
@@ -431,6 +461,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
         {/* Clear */}
         <button
           onClick={clear}
+          className="interactive-button"
           style={{
             background: 'none',
             border: '0.5px solid var(--border)',
@@ -450,6 +481,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
         {/* Close */}
         <button
           onClick={onClose}
+          className="interactive-button"
           style={{
             background: 'none',
             border: 'none',
@@ -487,7 +519,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
             No log entries
           </div>
         ) : (
-          filtered.map((entry) => <LogRow key={entry.id} entry={entry} />)
+          filtered.map((entry, index) => <LogRow key={entry.id} entry={entry} index={index} />)
         )}
       </div>
 

@@ -23,6 +23,7 @@ export interface CanvasTab {
 interface WorkspaceStore {
   tabs: CanvasTab[]
   activeTabId: string
+  resetToDefault: () => void
   addTab: (name?: string) => void
   removeTab: (id: string) => void
   renameTab: (id: string, name: string) => void
@@ -47,96 +48,111 @@ function makeDefaultTab(name = 'Canvas 1'): CanvasTab {
 
 export const useWorkspaceStore = create<WorkspaceStore>()(
   persist(
-    (set, get) => ({
-      tabs: [makeDefaultTab()],
-      activeTabId: '',
+    (set, get) => {
+      const initialTab = makeDefaultTab()
+      return {
+        tabs: [initialTab],
+        activeTabId: initialTab.id,
 
-      addTab: (name) => {
-        const tab = makeDefaultTab(name ?? `Canvas ${get().tabs.length + 1}`)
-        set((s) => ({ tabs: [...s.tabs, tab], activeTabId: tab.id }))
-      },
+        resetToDefault: () => {
+          const defaultTab = makeDefaultTab()
+          set({ tabs: [defaultTab], activeTabId: defaultTab.id })
+        },
 
-      removeTab: (id) => {
-        const { tabs, activeTabId } = get()
-        if (tabs.length === 1) return
-        const next = tabs.filter((t) => t.id !== id)
-        set({ tabs: next, activeTabId: activeTabId === id ? next[0].id : activeTabId })
-      },
+        addTab: (name) => {
+          const tab = makeDefaultTab(name ?? `Canvas ${get().tabs.length + 1}`)
+          set((s) => ({ tabs: [...s.tabs, tab], activeTabId: tab.id }))
+        },
 
-      renameTab: (id, name) =>
-        set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, name } : t)) })),
+        removeTab: (id) => {
+          const { tabs, activeTabId } = get()
+          if (tabs.length === 1) return
+          const next = tabs.filter((t) => t.id !== id)
+          set({ tabs: next, activeTabId: activeTabId === id ? next[0].id : activeTabId })
+        },
 
-      setActiveTab: (id) => set({ activeTabId: id }),
+        renameTab: (id, name) =>
+          set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, name } : t)) })),
 
-      updateLayout: (tabId, layout) =>
-        set((s) => ({
-          tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, layout } : t)),
-        })),
+        setActiveTab: (id) => set({ activeTabId: id }),
 
-      addWidget: (tabId, widget, layoutItem) =>
-        set((s) => ({
-          tabs: s.tabs.map((t) =>
-            t.id === tabId
-              ? {
-                  ...t,
-                  layout: [...t.layout, layoutItem],
-                  widgets: { ...t.widgets, [widget.id]: widget },
-                }
-              : t
-          ),
-        })),
+        updateLayout: (tabId, layout) =>
+          set((s) => ({
+            tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, layout } : t)),
+          })),
 
-      removeWidget: (tabId, widgetId) =>
-        set((s) => ({
-          tabs: s.tabs.map((t) => {
-            if (t.id !== tabId) return t
-            const { [widgetId]: _, ...rest } = t.widgets
-            return { ...t, layout: t.layout.filter((l) => l.i !== widgetId), widgets: rest }
-          }),
-        })),
-
-      updateWidgetConfig: (tabId, widgetId, config) =>
-        set((s) => ({
-          tabs: s.tabs.map((t) =>
-            t.id === tabId
-              ? {
-                  ...t,
-                  widgets: {
-                    ...t.widgets,
-                    [widgetId]: { ...t.widgets[widgetId], ...config },
-                  },
-                }
-              : t
-          ),
-        })),
-
-      getActiveTab: () => {
-        const { tabs, activeTabId } = get()
-        return tabs.find((t) => t.id === activeTabId) ?? tabs[0]
-      },
-
-      exportLayout: (tabId) => {
-        const tab = get().tabs.find((t) => t.id === tabId)
-        if (!tab) return ''
-        return encodeLayout(tab)
-      },
-
-      importLayout: (tabId, code) => {
-        try {
-          const decoded = decodeLayout(code)
+        addWidget: (tabId, widget, layoutItem) =>
           set((s) => ({
             tabs: s.tabs.map((t) =>
-              t.id === tabId ? { ...t, ...decoded } : t
+              t.id === tabId
+                ? {
+                    ...t,
+                    layout: [...t.layout, layoutItem],
+                    widgets: { ...t.widgets, [widget.id]: widget },
+                  }
+                : t
             ),
-          }))
-          return true
-        } catch {
-          return false
-        }
-      },
-    }),
+          })),
+
+        removeWidget: (tabId, widgetId) =>
+          set((s) => ({
+            tabs: s.tabs.map((t) => {
+              if (t.id !== tabId) return t
+              const { [widgetId]: _, ...rest } = t.widgets
+              return { ...t, layout: t.layout.filter((l) => l.i !== widgetId), widgets: rest }
+            }),
+          })),
+
+        updateWidgetConfig: (tabId, widgetId, config) =>
+          set((s) => ({
+            tabs: s.tabs.map((t) =>
+              t.id === tabId
+                ? {
+                    ...t,
+                    widgets: {
+                      ...t.widgets,
+                      [widgetId]: { ...t.widgets[widgetId], ...config },
+                    },
+                  }
+                : t
+            ),
+          })),
+
+        getActiveTab: () => {
+          const { tabs, activeTabId } = get()
+          return tabs.find((t) => t.id === activeTabId) ?? tabs[0]
+        },
+
+        exportLayout: (tabId) => {
+          const tab = get().tabs.find((t) => t.id === tabId)
+          if (!tab) return ''
+          return encodeLayout(tab)
+        },
+
+        importLayout: (tabId, code) => {
+          try {
+            const decoded = decodeLayout(code)
+            set((s) => ({
+              tabs: s.tabs.map((t) =>
+                t.id === tabId ? { ...t, ...decoded } : t
+              ),
+            }))
+            return true
+          } catch {
+            return false
+          }
+        },
+      }
+    },
     {
       name: 'pitwall-workspace',
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        // Keep activeTabId valid if legacy persisted data has an empty/missing ID.
+        if ((!state.activeTabId || state.activeTabId.trim() === '') && state.tabs.length > 0) {
+          state.setActiveTab(state.tabs[0].id)
+        }
+      },
     }
   )
 )

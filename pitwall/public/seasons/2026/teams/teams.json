@@ -1,0 +1,112 @@
+[
+  {
+    "id": "ferrari",
+    "name": "Scuderia Ferrari HP",
+    "shortName": "Ferrari",
+    "principal": "Frederic Vasseur",
+    "powerUnit": "Ferrari",
+    "base": "Maranello, Italy",
+    "drivers": [16, 44],
+    "logo": "teams/logos/ferrari.png"
+  },
+  {
+    "id": "mclaren",
+    "name": "McLaren Formula 1 Team",
+    "shortName": "McLaren",
+    "principal": "Andrea Stella",
+    "powerUnit": "Mercedes",
+    "base": "Woking, United Kingdom",
+    "drivers": [1, 81],
+    "logo": "teams/logos/mclaren.svg"
+  },
+  {
+    "id": "red_bull",
+    "name": "Oracle Red Bull Racing",
+    "shortName": "Red Bull",
+    "principal": "Christian Horner",
+    "powerUnit": "Ford Red Bull Powertrains",
+    "base": "Milton Keynes, United Kingdom",
+    "drivers": [3, 6],
+    "logo": "teams/logos/red_bull.svg"
+  },
+  {
+    "id": "mercedes",
+    "name": "Mercedes-AMG PETRONAS F1 Team",
+    "shortName": "Mercedes",
+    "principal": "Toto Wolff",
+    "powerUnit": "Mercedes",
+    "base": "Brackley, United Kingdom",
+    "drivers": [12, 63],
+    "logo": "teams/logos/mercedes.svg"
+  },
+  {
+    "id": "aston_martin",
+    "name": "Aston Martin Aramco Formula One Team",
+    "shortName": "Aston Martin",
+    "principal": "Mike Krack",
+    "powerUnit": "Honda RBPT",
+    "base": "Silverstone, United Kingdom",
+    "drivers": [14, 18],
+    "logo": "teams/logos/aston_martin.jpg"
+  },
+  {
+    "id": "alpine",
+    "name": "BWT Alpine F1 Team",
+    "shortName": "Alpine",
+    "principal": "Bruno Famin",
+    "powerUnit": "Renault",
+    "base": "Enstone, United Kingdom",
+    "drivers": [10, 43],
+    "logo": "teams/logos/alpine.png"
+  },
+  {
+    "id": "rb",
+    "name": "Visa Cash App Racing Bulls F1 Team",
+    "shortName": "Racing Bulls",
+    "principal": "Laurent Mekies",
+    "powerUnit": "Honda RBPT",
+    "base": "Faenza, Italy",
+    "drivers": [30, 41],
+    "logo": "teams/logos/rb.svg"
+  },
+  {
+    "id": "williams",
+    "name": "Atlassian Williams Racing",
+    "shortName": "Williams",
+    "principal": "James Vowles",
+    "powerUnit": "Mercedes",
+    "base": "Grove, United Kingdom",
+    "drivers": [23, 55],
+    "logo": "teams/logos/williams.png"
+  },
+  {
+    "id": "haas",
+    "name": "MoneyGram Haas F1 Team",
+    "shortName": "Haas",
+    "principal": "Ayao Komatsu",
+    "powerUnit": "Ferrari",
+    "base": "Kannapolis, United States",
+    "drivers": [31, 87],
+    "logo": "teams/logos/haas.svg"
+  },
+  {
+    "id": "audi",
+    "name": "Audi F1 Team",
+    "shortName": "Audi",
+    "principal": "Andreas Seidl",
+    "powerUnit": "Audi",
+    "base": "Hinwil, Switzerland",
+    "drivers": [5, 27],
+    "logo": "teams/logos/audi.png"
+  },
+  {
+    "id": "cadillac",
+    "name": "Cadillac Formula 1 Team",
+    "shortName": "Cadillac",
+    "principal": "Graeme Lowdon",
+    "powerUnit": "Ferrari",
+    "base": "Silverstone, United Kingdom",
+    "drivers": [11, 77],
+    "logo": "teams/logos/cadillac.svg"
+  }
+]

@@ -1,6 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'PitwallDriverNumber';
+  src: url('/seasons/2026/drivers/number-fonts/Teko-SemiBold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
 :root {
   --bg: #0B0B0C;
   --bg2: #111113;
@@ -22,7 +30,14 @@
   --amber: #E09000;
   --teal: #1AACB8;
   --pink: #E8648A;
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 360ms;
+  --motion-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-out: cubic-bezier(0.17, 0.84, 0.44, 1);
+  --motion-in-out: cubic-bezier(0.45, 0.05, 0.55, 0.95);
   --mono: 'JetBrains Mono', monospace;
+  --driver-number: 'PitwallDriverNumber', 'JetBrains Mono', monospace;
   --cond: 'Barlow Condensed', sans-serif;
   --body: 'Barlow', sans-serif;
 }
@@ -49,12 +64,311 @@ html, body {
   overflow: hidden;
 }
 
+.animated-surface {
+  animation: fadeInUp var(--motion-base) var(--motion-out) both;
+}
+
+.animated-fade {
+  animation: fadeIn var(--motion-base) ease both;
+}
+
+.animated-scale-in {
+  animation: scaleInSoft var(--motion-base) var(--motion-spring) both;
+}
+
+.animated-star-add {
+  animation: starAddSoft 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animated-star-remove {
+  animation: starRemoveSoft 240ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.animated-slide-down {
+  animation: slideDown var(--motion-base) var(--motion-out) both;
+}
+
+.animated-slide-right {
+  animation: slideRight var(--motion-slow) var(--motion-spring) both;
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: fadeInUp var(--motion-base) var(--motion-out) both;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+
+.interactive-chip,
+.interactive-button,
+.interactive-card {
+  transition:
+    transform var(--motion-fast) var(--motion-spring),
+    box-shadow var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease;
+}
+
+.interactive-chip:hover,
+.interactive-button:hover,
+.interactive-card:hover {
+  transform: translateY(-1px);
+}
+
+.interactive-chip:active,
+.interactive-button:active,
+.interactive-card:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.floating-pulse {
+  animation: floatingPulse 2.8s ease-in-out infinite;
+}
+
+.glass-overlay {
+  backdrop-filter: blur(2px);
+  animation: fadeIn var(--motion-base) ease both;
+}
+
+.glass-overlay-exit {
+  animation: fadeOut var(--motion-base) ease both;
+}
+
+.modal-panel {
+  animation: modalPop var(--motion-base) var(--motion-spring) both;
+}
+
+.modal-panel-exit {
+  animation: modalPopOut var(--motion-base) var(--motion-in-out) both;
+}
+
+.animated-slide-right-exit {
+  animation: slideRightOut var(--motion-base) var(--motion-in-out) both;
+}
+
+.animated-slide-down-exit {
+  animation: slideDownOut var(--motion-base) var(--motion-in-out) both;
+}
+
+.reveal-grow {
+  animation: revealGrow var(--motion-base) var(--motion-spring) both;
+  transform-origin: top center;
+}
+
+.star-pop {
+  animation: starPop var(--motion-base) var(--motion-spring) both;
+}
+
+.status-pulse {
+  animation: statusPulse var(--motion-base) var(--motion-spring) both;
+}
+
+.data-refresh-fade {
+  animation: dataRefreshFade var(--motion-base) var(--motion-out) both;
+}
+
+.flag-wave-refresh-fade {
+  animation: flagWaveRefreshFade var(--motion-base) ease both;
+}
+
+.scroll-fade {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleInSoft {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes starAddSoft {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes starRemoveSoft {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.94);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalPopOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+@keyframes slideRightOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+@keyframes slideDownOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes revealGrow {
+  from {
+    opacity: 0;
+    transform: scaleY(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes starPop {
+  0% {
+    transform: scale(0.86) rotate(-10deg);
+  }
+  70% {
+    transform: scale(1.15) rotate(6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes statusPulse {
+  0% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes dataRefreshFade {
+  0% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes flagWaveRefreshFade {
+  from { opacity: 0.2; }
+  to { opacity: 1; }
+}
+
+@keyframes floatingPulse {
+  0% {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  }
+  50% {
+    box-shadow: 0 5px 18px rgba(232,19,43,0.28);
+  }
+  100% {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* react-grid-layout */
 .react-grid-layout {
   position: relative;
 }
 .react-grid-item {
-  transition: none;
+  transition: transform var(--motion-fast) var(--motion-spring);
 }
 .react-grid-item.react-grid-placeholder {
   background: rgba(232,19,43,0.08);

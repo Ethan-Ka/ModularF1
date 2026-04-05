@@ -2,7 +2,25 @@
 
 Fan-built F1 race intelligence platform built on the [OpenF1 API](https://openf1.org). Provides real-time telemetry, inferred strategy metrics, ambient environment control, and a sharable layout system.
 
+Current version: **alpha v0.1.5**
+
 Not affiliated with Formula 1, FIA, or Formula One Management.
+
+---
+
+## Status snapshot (April 2026)
+
+This README includes both implemented features and roadmap items. Current status:
+
+| Area | Status | Notes |
+|---|---|---|
+| Core app shell, canvas, drag/drop workspace | ✅ Shipped | Multi-tab canvas, widget layout persistence, settings system |
+| Ambient race layer and flag-state visuals | ✅ Shipped | Includes top chrome gradient/wave layers and transitions |
+| 2026 season asset bundle | ✅ Shipped | Season index/manifest, track metadata, and track layout assets |
+| Standings board widget | ✅ Shipped | Live projected driver + constructor points view |
+| Full 33-widget catalog | 🟡 In progress | Several widgets are currently prototype placeholders |
+| RGB bridge adapters (WLED/Hue/Govee) | 🟡 In progress | Bridge scaffolding and adapters exist; integrations are evolving |
+| Overlay desktop/F1TV mode | 🔵 Planned | Roadmap item (Phase 4), not in the current release |
 
 ---
 
@@ -12,7 +30,7 @@ All race data comes from OpenF1.
 
 | Tier | Cost | What you get |
 |---|---|---|
-| Historical | Free | 2023–present sessions, all 33 widgets, all inferred metrics, no live updates |
+| Historical | Free | 2023–present sessions, all shipped widgets, inferred metrics where implemented, no live updates |
 | Live | $10/month (your own key) | ~3-second real-time data, WebSocket feed, all 18 endpoints, team radio |
 
 **You must provide your own OpenF1 API key for live data.** The key is stored in localStorage (desktop: OS keychain) and never sent to Pitwall's servers. All API calls go directly from your browser to `api.openf1.org`.
@@ -25,7 +43,7 @@ There is no workaround for live data. Real-time OpenF1 requires a paid subscript
 
 ### Widgets
 
-33 widgets across 8 categories. Every widget is drag-and-drop. Every widget has a four-tab settings panel (Display, Driver, Formula, Advanced). The Formula tab is only visible on inferred widgets.
+Widget catalog target is **33 widgets across 8 categories**. The current build includes production widgets plus prototype placeholders for roadmap items. All widgets remain drag-and-drop. The Formula tab appears on inferred widgets where that logic is implemented.
 
 **Timing & Gaps** (6 widgets)
 - Lap Delta Tower — ranked list of all drivers with lap time, gap to leader, interval, and 3-lap trend arrow

@@ -2,6 +2,7 @@ import { useRef, useEffect, useMemo, useState } from 'react'
 import { usePositions } from '../../hooks/usePositions'
 import { useIntervals } from '../../hooks/useIntervals'
 import { useDriverStore } from '../../store/driverStore'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
 
 interface FullTrackMapProps {
   widgetId: string
@@ -46,6 +47,7 @@ export function FullTrackMap({ widgetId: _ }: FullTrackMapProps) {
   const { data: positions } = usePositions()
   const { data: intervals } = useIntervals()
   const { getDriver, getTeamColor } = useDriverStore()
+  const refreshFade = useRefreshFade([positions, intervals])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -111,6 +113,7 @@ export function FullTrackMap({ widgetId: _ }: FullTrackMapProps) {
   return (
     <div
       ref={containerRef}
+      className={refreshFade ? 'data-refresh-fade' : undefined}
       style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
     >
       <svg

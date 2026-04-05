@@ -1,10 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useWorkspaceStore } from '../../store/workspaceStore'
+import { useShallow } from 'zustand/react/shallow'
 import { useWidgetDriver } from '../../hooks/useWidgetDriver'
 import { WidgetSettingsPanel } from '../WidgetSettings/WidgetSettingsPanel'
 import { useDriverStore } from '../../store/driverStore'
 import { WidgetErrorBoundary } from '../ErrorBoundary/WidgetErrorBoundary'
+import { useAmbientStore } from '../../store/ambientStore'
+import { FLAG_COLORS } from '../AmbientBar/flagStateMachine'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
+import {
+  serializeWidgetTransferPayload,
+  WIDGET_TRANSFER_MIME,
+} from '../../lib/widgetTransfer'
+import { WINDOW_CLIENT_ID } from '../../lib/windowSync'
 
 // Maps driverContext type to a human-readable widget type label
 function widgetTypeLabel(type: string): string {
@@ -30,20 +39,27 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const tabs = useWorkspaceStore((s) => s.tabs)
+  const { tabId, config, layoutItem } = useWorkspaceStore(
+    useShallow((s) => {
+      for (const tab of s.tabs) {
+        const widgetConfig = tab.widgets[widgetId]
+        if (widgetConfig) {
+          return {
+            tabId: tab.id,
+            config: widgetConfig,
+            layoutItem: tab.layout.find((item) => item.i === widgetId),
+          }
+        }
+      }
+
+      return {
+        tabId: undefined,
+        config: undefined,
+        layoutItem: undefined,
+      }
+    })
+  )
   const removeWidget = useWorkspaceStore((s) => s.removeWidget)
-
-  // Find this widget's config across all tabs
-  let tabId: string | undefined
-  let config = undefined as ReturnType<typeof useWorkspaceStore.getState>['tabs'][0]['widgets'][string] | undefined
-
-  for (const tab of tabs) {
-    if (tab.widgets[widgetId]) {
-      tabId = tab.id
-      config = tab.widgets[widgetId]
-      break
-    }
-  }
 
   const { badge, badgeLabel, borderColor, driverNumber } = useWidgetDriver(
     config?.driverContext ?? 'FOCUS'
@@ -53,6 +69,11 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
 
   const driver = driverNumber != null ? getDriver(driverNumber) : undefined
   const teamColor = driverNumber != null ? getTeamColor(driverNumber) : undefined
+  const flagState = useAmbientStore((s) => s.flagState)
+  const ambientLayerEnabled = useAmbientStore((s) => s.ambientLayerEnabled)
+  const ambientLayerIntensity = useAmbientStore((s) => s.ambientLayerIntensity)
+  const isPoppedOut = Boolean(config?.settings && (config.settings as Record<string, unknown>).poppedOut)
+  const focusRefresh = useRefreshFade([config?.driverContext, driverNumber])
 
   // Badge styles
   const badgeColor =
@@ -84,11 +105,48 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
     setContextMenuPos(null)
   }
 
+  function buildTransferPayload() {
+    if (!tabId || !config) return null
+    return {
+      version: 1 as const,
+      sourceClientId: WINDOW_CLIENT_ID,
+      sourceTabId: tabId,
+      widget: config,
+      layout: {
+        w: layoutItem?.w ?? 6,
+        h: layoutItem?.h ?? 6,
+        minW: layoutItem?.minW,
+        minH: layoutItem?.minH,
+      },
+    }
+  }
+
+  async function popOutWidget() {
+    const payload = buildTransferPayload()
+    if (!payload || !tabId || !window.electronAPI) return
+    try {
+      await window.electronAPI.openNewWindow({ transferWidget: payload })
+      removeWidget(tabId, widgetId)
+      setContextMenuPos(null)
+    } catch {
+      // no-op: keep widget in place if opening a new window fails
+    }
+  }
+
+  function handleTransferDragStart(e: React.DragEvent<HTMLButtonElement>) {
+    const payload = buildTransferPayload()
+    if (!payload) return
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData(WIDGET_TRANSFER_MIME, serializeWidgetTransferPayload(payload))
+    e.dataTransfer.setData('text/plain', config?.type ?? 'widget')
+  }
+
   if (!config) return null
 
   return (
     <>
       <div
+        className="animated-scale-in"
         style={{
           width: '100%',
           height: '100%',
@@ -102,6 +160,21 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
         }}
         onContextMenu={handleContextMenu}
       >
+        {isPoppedOut && ambientLayerEnabled && flagState !== 'NONE' && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: `radial-gradient(140% 110% at 50% -18%, ${FLAG_COLORS[flagState].glow}1a 0%, transparent 62%)`,
+              opacity: Math.min(0.24, (ambientLayerIntensity / 100) * 0.26),
+              transition: 'opacity 0.25s ease, background 0.25s ease',
+              zIndex: 0,
+            }}
+          />
+        )}
+
         {/* Chrome header — full header is the drag handle */}
         <div
           className="widget-drag-handle"
@@ -115,6 +188,8 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
             flexShrink: 0,
             gap: 6,
             cursor: 'grab',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
 
@@ -122,6 +197,7 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
           <div
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); setSettingsOpen(true) }}
+            className="interactive-chip"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -171,6 +247,7 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
           <button
             onClick={(e) => { e.stopPropagation(); setSettingsOpen(true) }}
             onMouseDown={(e) => e.stopPropagation()}
+            className="interactive-button"
             style={{
               background: 'none',
               border: 'none',
@@ -186,10 +263,33 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
             ⚙
           </button>
 
+          {/* Transfer handle for dragging widget to another window */}
+          <button
+            draggable={true}
+            onDragStart={handleTransferDragStart}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Drag to another window"
+            className="interactive-button"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--muted2)',
+              cursor: 'grab',
+              padding: '0 2px',
+              fontSize: 10,
+              lineHeight: 1,
+              transition: 'color 0.12s',
+            }}
+            aria-label="Transfer widget"
+          >
+            ⇄
+          </button>
+
           {/* Close button */}
           <button
             onClick={(e) => { e.stopPropagation(); handleRemove() }}
             onMouseDown={(e) => e.stopPropagation()}
+            className="interactive-button"
             style={{
               background: 'none',
               border: 'none',
@@ -207,7 +307,10 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
         </div>
 
         {/* Widget content */}
-        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <div
+          className={focusRefresh ? 'data-refresh-fade' : undefined}
+          style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1 }}
+        >
           <WidgetErrorBoundary widgetId={widgetId} widgetType={config.type}>
             {children}
           </WidgetErrorBoundary>
@@ -218,6 +321,7 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
       {contextMenuPos && createPortal(
         <div
           ref={menuRef}
+          className="animated-scale-in"
           style={{
             position: 'fixed',
             left: contextMenuPos.x,
@@ -234,6 +338,11 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
           <ContextMenuItem onClick={() => { setSettingsOpen(true); setContextMenuPos(null) }}>
             Settings
           </ContextMenuItem>
+          {window.electronAPI && (
+            <ContextMenuItem onClick={() => { void popOutWidget() }}>
+              Pop out widget
+            </ContextMenuItem>
+          )}
           <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
           <ContextMenuItem onClick={handleRemove} danger>
             Remove widget

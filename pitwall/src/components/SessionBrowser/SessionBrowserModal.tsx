@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSessions } from '../../hooks/useSession'
 import { useSessionStore } from '../../store/sessionStore'
@@ -45,9 +45,11 @@ function SessionTypeBadge({ type }: { type: string }) {
 function SessionRow({
   session,
   onSelect,
+  index,
 }: {
   session: OpenF1Session
   onSelect: () => void
+  index: number
 }) {
   const [hovered, setHovered] = useState(false)
 
@@ -56,6 +58,7 @@ function SessionRow({
       onClick={onSelect}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="interactive-card stagger-item"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -68,6 +71,7 @@ function SessionRow({
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'background 0.1s',
+        ['--stagger-delay' as string]: `${Math.min(index * 14, 220)}ms`,
       }}
     >
       <span style={{
@@ -140,21 +144,43 @@ function CircuitGroup({
       </div>
 
       {/* Session rows */}
-      {sessions.map((s) => (
-        <SessionRow key={s.session_key} session={s} onSelect={() => onSelect(s)} />
+      {sessions.map((s, index) => (
+        <SessionRow
+          key={s.session_key}
+          session={s}
+          onSelect={() => onSelect(s)}
+          index={index}
+        />
       ))}
     </div>
   )
 }
 
 export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
+  const EXIT_MS = 220
   const [selectedYear, setSelectedYear] = useState<number>(2025)
+  const [isClosing, setIsClosing] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { data: sessions, isLoading } = useSessions(selectedYear)
   const setActiveSession = useSessionStore((s) => s.setActiveSession)
 
+  function handleRequestClose() {
+    if (isClosing) return
+    setIsClosing(true)
+    closeTimerRef.current = setTimeout(() => {
+      onClose()
+    }, EXIT_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
+
   function handleSelect(session: OpenF1Session) {
     setActiveSession(session)
-    onClose()
+    handleRequestClose()
   }
 
   // Group sessions by circuit_short_name, preserving order of first appearance
@@ -169,7 +195,8 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
 
   return createPortal(
     <div
-      onClick={onClose}
+      onClick={handleRequestClose}
+      className={isClosing ? 'glass-overlay glass-overlay-exit' : 'glass-overlay'}
       style={{
         position: 'fixed',
         inset: 0,
@@ -184,6 +211,7 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
       {/* Panel */}
       <div
         onClick={(e) => e.stopPropagation()}
+        className={isClosing ? 'modal-panel modal-panel-exit' : 'modal-panel'}
         style={{
           width: 600,
           maxHeight: 'calc(100vh - 120px)',
@@ -219,6 +247,7 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
               <button
                 key={year}
                 onClick={() => setSelectedYear(year)}
+                className="interactive-button"
                 style={{
                   padding: '3px 10px',
                   borderRadius: 3,
@@ -240,7 +269,8 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
           <div style={{ flex: 1 }} />
 
           <button
-            onClick={onClose}
+            onClick={handleRequestClose}
+            className="interactive-button"
             style={{
               background: 'none',
               border: 'none',
@@ -257,7 +287,7 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
         </div>
 
         {/* Body */}
-        <div style={{ overflowY: 'auto', flex: 1 }}>
+        <div className="scroll-fade" style={{ overflowY: 'auto', flex: 1 }}>
           {isLoading ? (
             <div style={{
               display: 'flex',

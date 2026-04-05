@@ -4,8 +4,21 @@ import { useSessionStore } from '../store/sessionStore'
 import { useAmbientStore } from '../store/ambientStore'
 import { useEffect, useRef } from 'react'
 import type { FlagState } from '../store/ambientStore'
+import { queryModePolicy } from './queryModePolicy'
 
 function mapFlagToState(flag: string | null, message: string): FlagState | null {
+  const msg = message.toUpperCase()
+  if (msg.includes('NATIONAL ANTHEM')) return 'NATIONAL_ANTHEM'
+  if (
+    msg.includes('START PROCEDURE') ||
+    msg.includes('FORMATION LAP') ||
+    msg.includes('RACE START') ||
+    msg.includes('WILL START')
+  ) {
+    return 'WAITING_FOR_START'
+  }
+  if (msg.includes('FASTEST LAP')) return 'FASTEST_LAP'
+
   if (!flag) return null
   const f = flag.toUpperCase()
   if (f === 'RED') return 'RED'
@@ -15,7 +28,6 @@ function mapFlagToState(flag: string | null, message: string): FlagState | null 
   if (f === 'SC DEPLOYED' || message.includes('SAFETY CAR DEPLOYED')) return 'SAFETY_CAR'
   if (f === 'VSC DEPLOYED' || message.includes('VIRTUAL SAFETY CAR DEPLOYED')) return 'VIRTUAL_SC'
   if (f === 'SC ENDING' || f === 'VSC ENDING') return 'GREEN'
-  if (message.includes('FASTEST LAP')) return 'FASTEST_LAP'
   return null
 }
 
@@ -30,8 +42,10 @@ export function useRaceControl() {
     queryKey: ['race_control', sessionKey],
     queryFn: () => fetchRaceControl(sessionKey!, apiKey),
     enabled: !!sessionKey,
-    staleTime: 10_000,
-    refetchInterval: mode === 'live' ? 10_000 : false,
+    ...queryModePolicy(mode, {
+      staleTime: 10_000,
+      refetchInterval: 10_000,
+    }),
     retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
   })
 

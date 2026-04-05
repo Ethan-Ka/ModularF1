@@ -2,11 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchIntervals } from '../api/openf1'
 import { useSessionStore } from '../store/sessionStore'
 import type { OpenF1Interval } from '../api/openf1'
+import { queryModePolicy } from './queryModePolicy'
 
-export function useIntervals() {
+export function useIntervals(options?: { preload?: boolean }) {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
   const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
   const mode = useSessionStore((s) => s.mode)
+  const liveRefetchInterval = options?.preload ? false : 8_000
 
   return useQuery({
     queryKey: ['intervals', sessionKey],
@@ -21,8 +23,10 @@ export function useIntervals() {
       return Array.from(map.values())
     },
     enabled: !!sessionKey,
-    staleTime: 5_000,
-    refetchInterval: mode === 'live' ? 8_000 : false,
+    ...queryModePolicy(mode, {
+      staleTime: 5_000,
+      refetchInterval: liveRefetchInterval,
+    }),
     retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
   })
 }

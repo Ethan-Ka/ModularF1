@@ -1,4 +1,5 @@
 import { useSessionStore } from '../../store/sessionStore'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
 
 interface WeatherRadarProps {
   widgetId: string
@@ -45,11 +46,14 @@ function buildWindyUrl(lat: number, lon: number, zoom: number): string {
 export function WeatherRadar({ widgetId: _ }: WeatherRadarProps) {
   const activeSession = useSessionStore((s) => s.activeSession)
   const circuitName = activeSession?.circuit_short_name ?? null
+  const refreshFade = useRefreshFade([activeSession?.session_key, circuitName])
 
   const coords = circuitName ? CIRCUIT_COORDS[circuitName] : null
 
   return (
-    <div style={{
+    <div
+      className={refreshFade ? 'data-refresh-fade' : undefined}
+      style={{
       width: '100%',
       height: '100%',
       display: 'flex',
@@ -141,9 +145,9 @@ export function WeatherRadar({ widgetId: _ }: WeatherRadarProps) {
               lineHeight: 1.8,
               maxWidth: 200,
             }}>
-              {!circuitName
-                ? 'No active session. Select a session to load circuit weather.'
-                : `Circuit coordinates not found for "${circuitName}". Windy embed will load once coordinates are available.`
+              {circuitName
+                ? `Circuit coordinates not found for "${circuitName}". Windy embed will load once coordinates are available.`
+                : 'No active session. Select a session to load circuit weather.'
               }
             </div>
             {circuitName && (

@@ -21,16 +21,16 @@ export function CanvasTabs() {
   }
 
   return (
-    <div style={{
+    <div className="animated-slide-down" style={{
       height: 28,
-      background: 'var(--bg2)',
-      borderBottom: '0.5px solid var(--border)',
+      background: 'transparent',
+      borderBottom: 'none',
       display: 'flex',
       alignItems: 'stretch',
       flexShrink: 0,
       overflowX: 'auto',
     }}>
-      {tabs.map((tab) => {
+      {tabs.map((tab, index) => {
         const isActive = tab.id === activeTabId
         const isEditing = editingId === tab.id
 
@@ -39,6 +39,7 @@ export function CanvasTabs() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             onDoubleClick={() => startRename(tab.id, tab.name)}
+            className="stagger-item interactive-chip"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -51,6 +52,8 @@ export function CanvasTabs() {
               flexShrink: 0,
               minWidth: 0,
               position: 'relative',
+              zIndex: 2,
+              ['--stagger-delay' as string]: `${Math.min(180, index * 26)}ms`,
             }}
           >
             {isEditing ? (
@@ -96,6 +99,7 @@ export function CanvasTabs() {
                   e.stopPropagation()
                   removeTab(tab.id)
                 }}
+                className="interactive-button"
                 style={{
                   background: 'none',
                   border: 'none',
@@ -119,6 +123,7 @@ export function CanvasTabs() {
       {/* Add tab button */}
       <button
         onClick={() => addTab()}
+        className="interactive-button"
         style={{
           display: 'flex',
           alignItems: 'center',

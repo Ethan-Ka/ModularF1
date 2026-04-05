@@ -1,5 +1,6 @@
 import { usePositions } from '../../hooks/usePositions'
 import { useDriverStore } from '../../store/driverStore'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
 
 interface RunningOrderStripProps {
   widgetId: string
@@ -7,7 +8,8 @@ interface RunningOrderStripProps {
 
 export function RunningOrderStrip({ widgetId: _ }: RunningOrderStripProps) {
   const { data: positions } = usePositions()
-  const { getDriver, getTeamColor } = useDriverStore()
+  const { getDriver, getTeamColor, getTeamLogo } = useDriverStore()
+  const refreshFade = useRefreshFade([positions])
 
   const sorted = positions ?? []
 
@@ -28,7 +30,9 @@ export function RunningOrderStrip({ widgetId: _ }: RunningOrderStripProps) {
   }
 
   return (
-    <div style={{
+    <div
+      className={refreshFade ? 'data-refresh-fade' : undefined}
+      style={{
       width: '100%',
       height: '100%',
       display: 'flex',
@@ -40,6 +44,7 @@ export function RunningOrderStrip({ widgetId: _ }: RunningOrderStripProps) {
       {sorted.map((pos) => {
         const driver = getDriver(pos.driver_number)
         const color = getTeamColor(pos.driver_number)
+        const teamLogo = getTeamLogo(pos.driver_number)
 
         return (
         <div
@@ -52,15 +57,33 @@ export function RunningOrderStrip({ widgetId: _ }: RunningOrderStripProps) {
             flex: 1,
           }}
         >
-          {/* Colored circle */}
-          <div style={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            background: color,
-            boxShadow: `0 0 4px ${color}88`,
-            flexShrink: 0,
-          }} />
+          {/* Team logo with color fallback */}
+          {teamLogo ? (
+            <img
+              src={teamLogo}
+              alt={driver?.team_name ?? 'Team logo'}
+              style={{
+                width: 12,
+                height: 12,
+                objectFit: 'contain',
+                borderRadius: 2,
+                background: 'rgba(255,255,255,0.03)',
+                border: '0.5px solid var(--border)',
+                padding: 1,
+                boxSizing: 'border-box',
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: color,
+              boxShadow: `0 0 4px ${color}88`,
+              flexShrink: 0,
+            }} />
+          )}
           {/* Driver abbr */}
           <span style={{
             fontFamily: 'var(--mono)',

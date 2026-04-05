@@ -1,5 +1,6 @@
 import { useRaceControl } from '../../hooks/useRaceControl'
 import type { OpenF1RaceControl } from '../../api/openf1'
+import { useRefreshFade } from '../../hooks/useRefreshFade'
 
 interface RaceControlFeedProps {
   widgetId: string
@@ -119,13 +120,16 @@ function RaceControlRow({ entry }: { entry: OpenF1RaceControl }) {
 
 export function RaceControlFeed({ widgetId: _ }: RaceControlFeedProps) {
   const { data } = useRaceControl()
+  const refreshFade = useRefreshFade([data])
 
   const entries = data
     ? [...data].reverse().slice(0, 50)
     : []
 
   return (
-    <div style={{
+    <div
+      className={refreshFade ? 'data-refresh-fade' : undefined}
+      style={{
       width: '100%',
       height: '100%',
       display: 'flex',

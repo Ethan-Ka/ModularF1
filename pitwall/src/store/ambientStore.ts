@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { useSessionStore } from './sessionStore'
 import { useDriverStore } from './driverStore'
 
@@ -36,6 +37,7 @@ interface AmbientStore {
   bannerMessage: BannerMessage | null
   ambientLayerEnabled: boolean
   ambientLayerIntensity: number
+  ambientLayerWaveEnabled: boolean
   setFlagState: (state: FlagState, message?: string) => void
   addToast: (message: string, flagState?: FlagState) => void
   setLeaderColorMode: (enabled: boolean) => void
@@ -44,6 +46,7 @@ interface AmbientStore {
   clearToasts: () => void
   setAmbientLayerEnabled: (enabled: boolean) => void
   setAmbientLayerIntensity: (intensity: number) => void
+  setAmbientLayerWaveEnabled: (enabled: boolean) => void
 }
 
 function buildToast(message: string, flagState: FlagState): ToastItem {
@@ -84,82 +87,104 @@ function buildGreenLeaderMessage(leaderDriverNumber: number | null): string {
   return leaderAcronym ? `Green flag - ${leaderAcronym} leads` : 'Green flag - racing'
 }
 
-export const useAmbientStore = create<AmbientStore>()((set, get) => ({
-  flagState: 'NONE',
-  previousFlagState: 'NONE',
-  leaderColorMode: true,
-  leaderColor: null,
-  leaderDriverNumber: null,
-  toasts: [],
-  bannerMessage: null,
-  ambientLayerEnabled: true,
-  ambientLayerIntensity: 40,
+function buildCheckeredWinnerMessage(leaderDriverNumber: number | null): string {
+  const leaderAcronym = getLeaderAcronym(leaderDriverNumber)
+  return leaderAcronym ? `${leaderAcronym} win` : 'Chequered flag'
+}
 
-  setFlagState: (state, message) => {
-    const normalizedState: FlagState = state === 'NONE' && isLiveRaceSession() ? 'GREEN' : state
-    const prev = get().flagState
+export const useAmbientStore = create<AmbientStore>()(
+  persist(
+    (set, get) => ({
+      flagState: 'NONE',
+      previousFlagState: 'NONE',
+      leaderColorMode: true,
+      leaderColor: null,
+      leaderDriverNumber: null,
+      toasts: [],
+      bannerMessage: null,
+      ambientLayerEnabled: true,
+      ambientLayerIntensity: 40,
+      ambientLayerWaveEnabled: true,
 
-    const resolvedText =
-      normalizedState === 'GREEN'
-        ? buildGreenLeaderMessage(get().leaderDriverNumber)
-        : (message ?? normalizedState.replace(/_/g, ' '))
+      setFlagState: (state, message) => {
+        const normalizedState: FlagState = state === 'NONE' && isLiveRaceSession() ? 'GREEN' : state
+        const prev = get().flagState
 
-    const currentBannerText = get().bannerMessage?.text ?? ''
-    if (prev === normalizedState && normalizedState !== 'FASTEST_LAP' && currentBannerText === resolvedText) return
+        const resolvedText =
+          normalizedState === 'GREEN'
+            ? buildGreenLeaderMessage(get().leaderDriverNumber)
+            : normalizedState === 'CHECKERED'
+              ? buildCheckeredWinnerMessage(get().leaderDriverNumber)
+              : (message ?? normalizedState.replace(/_/g, ' '))
 
-    const previousForRestore: FlagState =
-      normalizedState === 'FASTEST_LAP' && prev === 'NONE' && isLiveRaceSession() ? 'GREEN' : prev
+        const currentBannerText = get().bannerMessage?.text ?? ''
+        if (prev === normalizedState && normalizedState !== 'FASTEST_LAP' && currentBannerText === resolvedText) return
 
-    const bannerMessage: BannerMessage = {
-      text: resolvedText,
-      id: crypto.randomUUID(),
-    }
+        const previousForRestore: FlagState =
+          normalizedState === 'FASTEST_LAP' && prev === 'NONE' && isLiveRaceSession() ? 'GREEN' : prev
 
-    // Race events animate in the banner — not as pill toasts
-    set((s) => ({ flagState: normalizedState, previousFlagState: previousForRestore, bannerMessage }))
-
-    // Auto-dismiss fastest lap after 2.8s, then restore
-    if (normalizedState === 'FASTEST_LAP') {
-      setTimeout(() => {
-        const current = get()
-        if (current.flagState === 'FASTEST_LAP') {
-          const restoreState: FlagState =
-            current.previousFlagState === 'NONE' && isLiveRaceSession()
-              ? 'GREEN'
-              : current.previousFlagState
-          set({ flagState: restoreState })
-        }
-      }, 2800)
-    }
-  },
-
-  addToast: (message, flagState = 'YELLOW') => {
-    const toast = buildToast(message, flagState)
-    set((s) => ({ toasts: [...s.toasts, toast] }))
-    scheduleToastRemoval(toast.id)
-  },
-
-  setLeaderColorMode: (enabled) => set({ leaderColorMode: enabled }),
-
-  setLeader: (driverNumber, color) => {
-    const current = get()
-    if (current.leaderDriverNumber === driverNumber && current.leaderColor === color) return
-    set({ leaderDriverNumber: driverNumber, leaderColor: color })
-
-    const next = get()
-    if (next.flagState === 'GREEN' && next.leaderColorMode) {
-      set({
-        bannerMessage: {
-          text: buildGreenLeaderMessage(driverNumber),
+        const bannerMessage: BannerMessage = {
+          text: resolvedText,
           id: crypto.randomUUID(),
-        },
-      })
+        }
+
+        // Race events animate in the banner — not as pill toasts
+        set((s) => ({ flagState: normalizedState, previousFlagState: previousForRestore, bannerMessage }))
+
+        // Auto-dismiss fastest lap after 2.8s, then restore
+        if (normalizedState === 'FASTEST_LAP') {
+          setTimeout(() => {
+            const current = get()
+            if (current.flagState === 'FASTEST_LAP') {
+              const restoreState: FlagState =
+                current.previousFlagState === 'NONE' && isLiveRaceSession()
+                  ? 'GREEN'
+                  : current.previousFlagState
+              set({ flagState: restoreState })
+            }
+          }, 2800)
+        }
+      },
+
+      addToast: (message, flagState = 'YELLOW') => {
+        const toast = buildToast(message, flagState)
+        set((s) => ({ toasts: [...s.toasts, toast] }))
+        scheduleToastRemoval(toast.id)
+      },
+
+      setLeaderColorMode: (enabled) => set({ leaderColorMode: enabled }),
+
+      setLeader: (driverNumber, color) => {
+        const current = get()
+        if (current.leaderDriverNumber === driverNumber && current.leaderColor === color) return
+        set({ leaderDriverNumber: driverNumber, leaderColor: color })
+
+        const next = get()
+        if (next.flagState === 'GREEN' && next.leaderColorMode) {
+          set({
+            bannerMessage: {
+              text: buildGreenLeaderMessage(driverNumber),
+              id: crypto.randomUUID(),
+            },
+          })
+        }
+      },
+
+      dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+      clearToasts: () => set({ toasts: [] }),
+
+      setAmbientLayerEnabled: (enabled) => set({ ambientLayerEnabled: enabled }),
+      setAmbientLayerIntensity: (intensity) => set({ ambientLayerIntensity: Math.max(0, Math.min(100, intensity)) }),
+      setAmbientLayerWaveEnabled: (enabled) => set({ ambientLayerWaveEnabled: enabled }),
+    }),
+    {
+      name: 'pitwall-ambient',
+      partialize: (s) => ({
+        leaderColorMode: s.leaderColorMode,
+        ambientLayerEnabled: s.ambientLayerEnabled,
+        ambientLayerIntensity: s.ambientLayerIntensity,
+        ambientLayerWaveEnabled: s.ambientLayerWaveEnabled,
+      }),
     }
-  },
-
-  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-  clearToasts: () => set({ toasts: [] }),
-
-  setAmbientLayerEnabled: (enabled) => set({ ambientLayerEnabled: enabled }),
-  setAmbientLayerIntensity: (intensity) => set({ ambientLayerIntensity: Math.max(0, Math.min(100, intensity)) }),
-}))
+  )
+)

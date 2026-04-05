@@ -25,6 +25,7 @@
         background: var(--bg);
         color: var(--text);
         min-height: 100vh;
+        min-width: 520px;
         padding: 14px;
         font-size: 12px;
       }
@@ -147,6 +148,10 @@
       button.flag-ckd:hover   { background: #222; }
       button.flag-calm        { border-color: #2a3550; background: #0e1420; }
       button.flag-calm:hover  { background: #141c2a; }
+      button.flag-wait        { border-color: #35566f; background: #0d161d; }
+      button.flag-wait:hover  { background: #14222b; }
+      button.flag-anthem      { border-color: #4a4361; background: #13111b; }
+      button.flag-anthem:hover{ background: #1a1726; }
 
       /* Custom message row */
       .custom-msg-row {
@@ -259,6 +264,14 @@
           <span class="flag-name">🔵 Calm mode</span>
           <span class="flag-msg">Overrides color — toasts still animate</span>
         </button>
+        <button class="flag-btn flag-wait"   data-action="set-flag-waiting-start">
+          <span class="flag-name">🕒 Waiting for start</span>
+          <span class="flag-msg">Muted pre-race ambient track palette</span>
+        </button>
+        <button class="flag-btn flag-anthem" data-action="set-flag-national-anthem">
+          <span class="flag-name">🎵 National anthem</span>
+          <span class="flag-msg">Ceremonial ambient mode before lights out</span>
+        </button>
       </div>
 
       <!-- Custom banner message test -->
@@ -328,6 +341,31 @@
         <button data-action="set-mode-historical">Switch to historical mode</button>
         <button data-action="toggle-api-requests">Toggle API requests (temporary)</button>
         <button class="danger" data-action="simulate-invalid-api-key">Simulate invalid API key → onboarding</button>
+      </div>
+    </div>
+
+    <!-- LOADING PREVIEW -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Loading screen preview</h2>
+        <span class="badge">startup overlay test</span>
+      </div>
+      <div class="grid-2" style="margin-bottom: 6px;">
+        <button class="accent" data-action="loading-preview-start">Start preview</button>
+        <button data-action="loading-preview-toggle">Toggle preview</button>
+      </div>
+      <div class="grid-2" style="margin-bottom: 8px;">
+        <button data-action="loading-preview-reset">Reset progress</button>
+        <button data-action="loading-preview-finish">Finish preview</button>
+      </div>
+      <div class="section-header" style="margin-top: 2px;">
+        <h2>Advance steps</h2>
+        <span class="badge">manual progression</span>
+      </div>
+      <div class="grid-1">
+        <button data-action="loading-preview-advance-session">Advance: session ready</button>
+        <button data-action="loading-preview-advance-drivers">Advance: drivers ready</button>
+        <button data-action="loading-preview-advance-workspace">Advance: workspace ready</button>
       </div>
     </div>
 

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PITWALL Logo Source</title>
+    <style>
+      @font-face {
+        font-family: 'Barlow Condensed Local';
+        src: url('./fonts/BarlowCondensed-ExtraBold.ttf') format('truetype');
+        font-style: normal;
+        font-weight: 800;
+        font-display: block;
+      }
+
+      :root {
+        --bg: #0B0B0C;
+        --red: #E8132B;
+        --white: #F2F0EB;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        font-family: 'Barlow Condensed Local', 'Barlow Condensed', 'Arial Narrow', sans-serif;
+      }
+
+      .stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .wordmark {
+        width: 500px;
+        height: 150px;
+      }
+
+      .wordmark-text {
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        fill: var(--white);
+        text-anchor: middle;
+        user-select: none;
+      }
+
+      .wordmark-text .w {
+        color: var(--red);
+      }
+
+      .wordmark-svg {
+        width: 500px;
+        height: 150px;
+        display: block;
+      }
+
+      .monogram {
+        width: 256px;
+        height: 256px;
+      }
+
+      .monogram-svg {
+        width: 256px;
+        height: 256px;
+        display: block;
+      }
+
+      .monogram-text {
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        fill: var(--white);
+        text-anchor: middle;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="wordmark" class="stage wordmark" style="display: none">
+      <svg class="wordmark-svg" viewBox="0 0 500 150" role="img" aria-label="PITWALL">
+        <text class="wordmark-text" x="250" y="75" dy="0.35em" font-size="118">PIT<tspan fill="var(--red)">W</tspan>ALL</text>
+      </svg>
+    </div>
+
+    <div id="monogram" class="stage monogram" style="display: none">
+      <svg class="monogram-svg" viewBox="0 0 256 256" role="img" aria-label="PW monogram">
+        <rect width="256" height="256" fill="var(--bg)"></rect>
+        <text class="monogram-text" x="128" y="202" font-size="212">P<tspan fill="var(--red)">W</tspan></text>
+      </svg>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(window.location.search)
+      const variant = params.get('variant') || 'wordmark'
+
+      const wordmark = document.getElementById('wordmark')
+      const monogram = document.getElementById('monogram')
+
+      if (variant === 'monogram') {
+        monogram.style.display = 'grid'
+        document.body.style.background = '#0B0B0C'
+        document.body.style.width = '256px'
+        document.body.style.height = '256px'
+      } else {
+        wordmark.style.display = 'grid'
+        document.body.style.background = 'transparent'
+        document.body.style.width = '500px'
+        document.body.style.height = '150px'
+      }
+
+      // Expose a deterministic readiness marker for headless capture.
+      document.fonts.ready.then(() => {
+        document.documentElement.setAttribute('data-render-ready', '1')
+      })
+    </script>
+  </body>
+</html>

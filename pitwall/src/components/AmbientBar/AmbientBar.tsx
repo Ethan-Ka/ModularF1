@@ -6,7 +6,7 @@ import { FLAG_COLORS, getFlagLabel, getTransitionDuration } from './flagStateMac
 import { ToastQueue } from './ToastQueue'
 
 // Inject keyframe animations once
-const STYLE_ID = 'ambient-bar-keyframes'
+const STYLE_ID = 'ambient-bar-keyframes-v3'
 if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
   const style = document.createElement('style')
   style.id = STYLE_ID
@@ -76,9 +76,10 @@ type MsgPhase = 'idle' | 'in' | 'hold' | 'out'
 type AmbientBarProps = {
   embedded?: boolean
   toolbar?: boolean
+  transparentBackground?: boolean
 }
 
-export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProps) {
+export function AmbientBar({ embedded = false, toolbar = false, transparentBackground = false }: AmbientBarProps) {
   const flagState      = useAmbientStore((s) => s.flagState)
   const leaderColorMode = useAmbientStore((s) => s.leaderColorMode)
   const leaderColor    = useAmbientStore((s) => s.leaderColor)
@@ -92,7 +93,24 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
   const [msgPhase, setMsgPhase] = useState<MsgPhase>('idle')
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const greenHandoffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [leaderHandoffReady, setLeaderHandoffReady] = useState(flagState !== 'GREEN')
+  const [pulseBurstActive, setPulseBurstActive] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout)
+      timersRef.current = []
+      if (greenHandoffTimerRef.current) {
+        clearTimeout(greenHandoffTimerRef.current)
+        greenHandoffTimerRef.current = null
+      }
+      if (pulseTimerRef.current) {
+        clearTimeout(pulseTimerRef.current)
+        pulseTimerRef.current = null
+      }
+    }
+  }, [])
 
   // Start animation whenever a new banner message arrives
   useEffect(() => {
@@ -130,6 +148,31 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
     setLeaderHandoffReady(true)
   }, [flagState])
 
+  // Pulse burst behavior: pulse at entry for certain flags, then settle to solid.
+  useEffect(() => {
+    if (pulseTimerRef.current) {
+      clearTimeout(pulseTimerRef.current)
+      pulseTimerRef.current = null
+    }
+
+    const entryColors = FLAG_COLORS[flagState]
+    if (!entryColors.pulse) {
+      setPulseBurstActive(false)
+      return
+    }
+
+    if (entryColors.pulseBurstMs > 0) {
+      setPulseBurstActive(true)
+      pulseTimerRef.current = setTimeout(() => {
+        setPulseBurstActive(false)
+        pulseTimerRef.current = null
+      }, entryColors.pulseBurstMs)
+      return
+    }
+
+    setPulseBurstActive(true)
+  }, [flagState])
+
   const colors   = FLAG_COLORS[flagState]
   const label    = getFlagLabel(flagState)
   const duration = getTransitionDuration(flagState)
@@ -148,7 +191,7 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
   let bgFill: string = colors.background
   if (leaderPrimaryBlend && leaderPalette) {
     if (leaderSecondaryBlend) {
-      bgFill = `linear-gradient(120deg, ${leaderPrimaryBlend} 0%, ${leaderPrimaryBlend} 58%, ${leaderSecondaryBlend} 100%)`
+      bgFill = `linear-gradient(90deg, ${leaderPrimaryBlend} 0%, ${leaderPrimaryBlend} 58%, ${leaderSecondaryBlend} 100%)`
     } else {
       bgFill = leaderPrimaryBlend
     }
@@ -156,7 +199,7 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
 
   // Pulse animation
   let pulseAnimation: string | undefined
-  if (colors.pulse) {
+  if (colors.pulse && pulseBurstActive) {
     pulseAnimation = colors.pulseHz === 1
       ? 'ambientPulse1hz 1s ease-in-out infinite'
       : 'ambientPulse05hz 2s ease-in-out infinite'
@@ -182,10 +225,13 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
   const compactBackground = compact
     ? (leaderPrimaryBlend
         ? (leaderSecondaryBlend
-            ? `linear-gradient(120deg, ${withAlpha(leaderPrimaryBlend, embeddedBgAlpha)} 0%, ${withAlpha(leaderPrimaryBlend, embeddedBgAlpha)} 58%, ${withAlpha(leaderSecondaryBlend, embeddedBgAlpha)} 100%)`
+          ? `linear-gradient(90deg, ${withAlpha(leaderPrimaryBlend, embeddedBgAlpha)} 0%, ${withAlpha(leaderPrimaryBlend, embeddedBgAlpha)} 58%, ${withAlpha(leaderSecondaryBlend, embeddedBgAlpha)} 100%)`
             : withAlpha(leaderPrimaryBlend, embeddedBgAlpha))
         : withAlpha(bgFill, embeddedBgAlpha))
     : bgFill
+
+  const hideFlagBadge = flagState === 'NONE'
+  const showToolbarWordmark = toolbar && hideFlagBadge && !msgText
 
   return (
     <div
@@ -193,7 +239,7 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
         position: 'relative',
         height: toolbar ? '100%' : embedded ? 28 : 50,
         width: '100%',
-        background: compactBackground,
+        background: transparentBackground ? 'transparent' : compactBackground,
         border: undefined,
         borderRadius: toolbar ? 0 : embedded ? 4 : 0,
         transition: `background ${duration} ease, border-color ${duration} ease`,
@@ -207,37 +253,45 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
         pointerEvents: 'none',
       }}
     >
-      {/* Flag swatch */}
-      <div style={{
-        width: compact ? 18 : 24,
-        height: compact ? 12 : 16,
-        borderRadius: 2,
-        background: swatchBackground,
-        flexShrink: 0,
-        boxShadow: colors.flagColor !== 'transparent' ? `0 0 8px ${colors.glow}66` : undefined,
-        transition: `background ${duration} ease`,
-      }} />
+      {!hideFlagBadge && (
+        <>
+          {/* Flag swatch */}
+          <div style={{
+            width: compact ? 18 : 24,
+            height: compact ? 12 : 16,
+            borderRadius: 2,
+            background: swatchBackground,
+            flexShrink: 0,
+            boxShadow: colors.flagColor !== 'transparent' ? `0 0 8px ${colors.glow}66` : undefined,
+            transition: `background ${duration} ease`,
+            position: 'relative',
+            zIndex: 1,
+          }} />
 
-      {/* Flag state label — fades out when a message is showing */}
-      <span style={{
-        fontFamily: 'var(--mono)',
-        fontSize: compact ? 8 : 10,
-        letterSpacing: '0.12em',
-        textTransform: 'uppercase',
-        color: textColor,
-        transition: `color ${duration} ease, opacity 0.2s ease`,
-        opacity: msgVisible ? 0 : 1,
-        userSelect: 'none',
-        flexShrink: 0,
-      }}>
-        {label}
-      </span>
+          {/* Flag state label — fades out when a message is showing */}
+          <span style={{
+            fontFamily: 'var(--mono)',
+            fontSize: compact ? 8 : 10,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: textColor,
+            transition: `color ${duration} ease, opacity 0.2s ease`,
+            opacity: msgVisible ? 0 : 1,
+            userSelect: 'none',
+            flexShrink: 0,
+            position: 'relative',
+            zIndex: 1,
+          }}>
+            {label}
+          </span>
+        </>
+      )}
 
       {/* In-bar animated event message */}
       {msgText && (
         <span style={{
           position: 'absolute',
-          left: compact ? 36 : 52,
+          left: hideFlagBadge ? (compact ? 8 : 16) : (compact ? 36 : 52),
           fontFamily: 'var(--mono)',
           fontSize: compact ? 8 : 10,
           letterSpacing: '0.12em',
@@ -251,9 +305,38 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
           maxWidth: compact ? 'calc(100% - 40px)' : 'calc(100% - 120px)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
+          zIndex: 1,
         }}>
           {msgText}
         </span>
+      )}
+
+      {showToolbarWordmark && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 14,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 0,
+            fontFamily: 'var(--cond)',
+            fontSize: 18,
+            fontWeight: 800,
+            letterSpacing: '-0.01em',
+            lineHeight: 1,
+            color: 'var(--white)',
+            opacity: 0.86,
+            userSelect: 'none',
+            whiteSpace: 'nowrap',
+            zIndex: 1,
+          }}
+        >
+          <span>PIT</span>
+          <span style={{ color: 'var(--red)' }}>W</span>
+          <span>ALL</span>
+        </div>
       )}
 
       {/* Dev/system toast queue — only for addToast() calls, not flag events */}
@@ -279,6 +362,7 @@ export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProp
           : `linear-gradient(90deg, transparent 0%, ${colors.glow}88 30%, ${colors.glow} 50%, ${colors.glow}88 70%, transparent 100%)`,
         transition: `background ${duration} ease`,
         animation: !compact && colors.pulse ? 'glowLinePulse 1s ease-in-out infinite' : undefined,
+        zIndex: 1,
       }} />
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDraggingStore } from '../../store/draggingStore'
 
 interface WidgetPickerProps {
@@ -21,6 +21,78 @@ const WIDGETS: WidgetDef[] = [
     color: 'var(--red)',
   },
   {
+    type: 'LapTimeCard',
+    label: 'Lap Time Card',
+    description: 'Single-driver lap card with live split context',
+    color: 'var(--red)',
+  },
+  {
+    type: 'GapEvolutionChart',
+    label: 'Gap Evolution Chart',
+    description: 'Gap history chart between two selected drivers',
+    color: 'var(--red)',
+  },
+  {
+    type: 'StintPaceComparison',
+    label: 'Stint Pace Comparison',
+    description: 'Compares pace in a matched tyre age window',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'HeadToHeadDelta',
+    label: 'Head-to-Head Delta',
+    description: 'Direct comparison card for two driver targets',
+    color: 'var(--red)',
+  },
+  {
+    type: 'SectorMiniCards',
+    label: 'Sector Mini-Cards',
+    description: 'Compact S1/S2/S3 performance cards',
+    color: 'var(--red)',
+  },
+  {
+    type: 'SpeedGauge',
+    label: 'Speed Gauge',
+    description: 'Live speed telemetry with gear/rpm view',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'ThrottleBrakeTrace',
+    label: 'Throttle / Brake Trace',
+    description: 'Pedal input timeline for focused driver',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'GearTrace',
+    label: 'Gear Trace',
+    description: 'Rolling gear selection trace over time',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'ThrottleHeatmap',
+    label: 'Throttle Heatmap',
+    description: 'Lap segment throttle intensity heatmap',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'ERSMicroSectors',
+    label: 'ERS Micro-Sectors',
+    description: 'Inferred ERS deployment by micro-sector',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'DRSEfficiency',
+    label: 'DRS Efficiency',
+    description: 'Inferred open-vs-closed DRS delta metric',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'EngineModeTracker',
+    label: 'Engine Mode Tracker',
+    description: 'Inferred power mode behavior tracker',
+    color: 'var(--purple)',
+  },
+  {
     type: 'RunningOrderStrip',
     label: 'Running Order Strip',
     description: 'Horizontal dot row of all 20 drivers by position',
@@ -30,6 +102,36 @@ const WIDGETS: WidgetDef[] = [
     type: 'RaceControlFeed',
     label: 'Race Control Feed',
     description: 'Timestamped flag and incident log',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'StrategyTimeline',
+    label: 'Strategy Timeline',
+    description: 'All-driver stint timeline with pit markers',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'DegRateGraph',
+    label: 'Deg Rate Graph',
+    description: 'Inferred tyre degradation curve by stint',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'PitWindowUrgency',
+    label: 'Pit Window Urgency',
+    description: 'Inferred urgency signal for next stop window',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'PitStopLog',
+    label: 'Pit Stop Log',
+    description: 'Chronological pit stop history list',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'UndercutSimulator',
+    label: 'Undercut Simulator',
+    description: 'Scenario calculator for undercut outcomes',
     color: 'var(--gold)',
   },
   {
@@ -45,6 +147,18 @@ const WIDGETS: WidgetDef[] = [
     color: 'var(--cyan)',
   },
   {
+    type: 'TrackTempEvolution',
+    label: 'Track Temp Evolution',
+    description: 'Track temperature chart with inferred overlays',
+    color: 'var(--blue)',
+  },
+  {
+    type: 'WindDirection',
+    label: 'Wind Direction',
+    description: 'Wind direction and drift changes by heading',
+    color: 'var(--blue)',
+  },
+  {
     type: 'WeatherRadar',
     label: 'Weather Radar',
     description: 'Windy embed centered on circuit',
@@ -54,6 +168,60 @@ const WIDGETS: WidgetDef[] = [
     type: 'FullTrackMap',
     label: 'Full Track Map',
     description: 'Live driver positions on SVG circuit outline',
+    color: 'var(--purple)',
+  },
+  {
+    type: 'SectorMap',
+    label: 'Sector Map',
+    description: 'Track sectors with driver position context',
+    color: 'var(--green)',
+  },
+  {
+    type: 'OvertakeReplay',
+    label: 'Overtake Replay',
+    description: 'Historic overtake events and replay timeline',
+    color: 'var(--green)',
+  },
+  {
+    type: 'RadioScanner',
+    label: 'Radio Scanner',
+    description: 'Live team radio channel scanner',
+    color: 'var(--pink)',
+  },
+  {
+    type: 'RadioFeedText',
+    label: 'Radio Feed (Text)',
+    description: 'Text feed of transcribed radio messages',
+    color: 'var(--pink)',
+  },
+  {
+    type: 'StandingsBoard',
+    label: 'Standings Board',
+    description: 'Projected driver + constructor points board',
+    color: 'var(--green)',
+  },
+  {
+    type: 'StandingsTable',
+    label: 'Standings Table',
+    description: 'Live driver and constructor championship table',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'ChampionshipCalculator',
+    label: 'Championship Calculator',
+    description: 'What-if points outcomes and title scenarios',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'PointsDeltaTracker',
+    label: 'Points Delta Tracker',
+    description: 'Historic points swing between contenders',
+    color: 'var(--gold)',
+  },
+  {
+    type: 'CarVisualization',
+    label: 'Car Visualization',
+    description: '2026 car profile with telemetry overlays',
     color: 'var(--purple)',
   },
 ]
@@ -263,6 +431,77 @@ function PreviewWeatherRadar() {
   )
 }
 
+function PreviewStandingsBoard() {
+  const rows = [
+    { pos: 1, code: 'NOR', pts: 25, color: '#f97316' },
+    { pos: 2, code: 'VER', pts: 18, color: '#3b82f6' },
+    { pos: 3, code: 'LEC', pts: 15, color: '#ef4444' },
+  ]
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 4,
+      height: '100%',
+      padding: '5px 6px',
+      boxSizing: 'border-box',
+    }}>
+      {[0, 1].map((panel) => (
+        <div
+          key={panel}
+          style={{
+            border: '0.5px solid var(--border)',
+            borderRadius: 2,
+            overflow: 'hidden',
+            background: 'var(--bg3)',
+          }}
+        >
+          <div style={{
+            height: 11,
+            borderBottom: '0.5px solid var(--border)',
+            background: 'var(--bg4)',
+            fontFamily: 'var(--mono)',
+            fontSize: 5,
+            color: 'var(--muted2)',
+            letterSpacing: '0.08em',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            {panel === 0 ? 'DRIVERS' : 'TEAMS'}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {rows.map((row) => (
+              <div key={`${panel}-${row.code}`} style={{
+                height: 11,
+                borderBottom: '0.5px solid var(--border)',
+                display: 'grid',
+                gridTemplateColumns: '8px 2px 1fr 10px',
+                alignItems: 'center',
+                columnGap: 3,
+                padding: '0 4px',
+                boxSizing: 'border-box',
+              }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 5, color: 'var(--muted2)', textAlign: 'right' }}>
+                  {row.pos}
+                </span>
+                <div style={{ width: 2, height: 7, borderRadius: 1, background: row.color }} />
+                <span style={{ fontFamily: 'var(--cond)', fontSize: 8, color: 'var(--white)', lineHeight: 1 }}>
+                  {panel === 0 ? row.code : `T${row.pos}`}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 5, color: 'var(--muted)' }}>
+                  {row.pts}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const PREVIEW_MAP: Record<string, () => React.ReactElement> = {
   LapDeltaTower: PreviewLapDeltaTower,
   RunningOrderStrip: PreviewRunningOrderStrip,
@@ -271,16 +510,19 @@ const PREVIEW_MAP: Record<string, () => React.ReactElement> = {
   TyreIntelligence: PreviewTyreIntelligence,
   FullTrackMap: PreviewFullTrackMap,
   WeatherRadar: PreviewWeatherRadar,
+  StandingsBoard: PreviewStandingsBoard,
 }
 
 function WidgetCard({
   widget,
   onAdd,
   onClose,
+  index,
 }: {
   widget: WidgetDef
   onAdd: (type: string) => void
   onClose: () => void
+  index: number
 }) {
   const [hovered, setHovered] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -310,6 +552,7 @@ function WidgetCard({
       role="button"
       tabIndex={0}
       draggable={true}
+      className="interactive-card stagger-item"
       onClick={handleClick}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick() }}
       onDragStart={handleDragStart}
@@ -329,6 +572,7 @@ function WidgetCard({
         opacity: dragging ? 0.6 : 1,
         transition: 'border-color 0.12s, opacity 0.1s',
         flexShrink: 0,
+        ['--stagger-delay' as string]: `${Math.min(index * 22, 240)}ms`,
       }}
     >
       {/* Mini preview (top 75px) */}
@@ -394,7 +638,24 @@ function WidgetCard({
 }
 
 export function WidgetPicker({ onClose, onAdd }: WidgetPickerProps) {
+  const EXIT_MS = 220
   const [query, setQuery] = useState('')
+  const [isClosing, setIsClosing] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleRequestClose() {
+    if (isClosing) return
+    setIsClosing(true)
+    closeTimerRef.current = setTimeout(() => {
+      onClose()
+    }, EXIT_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
 
   const filtered = query.trim()
     ? WIDGETS.filter(
@@ -408,7 +669,8 @@ export function WidgetPicker({ onClose, onAdd }: WidgetPickerProps) {
     <>
       {/* Backdrop */}
       <div
-        onClick={onClose}
+        onClick={handleRequestClose}
+        className={isClosing ? 'glass-overlay glass-overlay-exit' : 'glass-overlay'}
         style={{
           position: 'fixed',
           inset: 0,
@@ -419,6 +681,7 @@ export function WidgetPicker({ onClose, onAdd }: WidgetPickerProps) {
 
       {/* Slide-in panel */}
       <div
+        className={isClosing ? 'animated-slide-right-exit' : 'animated-slide-right'}
         style={{
           position: 'fixed',
           top: 0,
@@ -473,7 +736,8 @@ export function WidgetPicker({ onClose, onAdd }: WidgetPickerProps) {
             </span>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleRequestClose}
+            className="interactive-button"
             style={{
               background: 'none',
               border: 'none',
@@ -536,12 +800,13 @@ export function WidgetPicker({ onClose, onAdd }: WidgetPickerProps) {
               gap: 10,
               justifyItems: 'center',
             }}>
-              {filtered.map((widget) => (
+              {filtered.map((widget, index) => (
                 <WidgetCard
                   key={widget.type}
                   widget={widget}
                   onAdd={onAdd}
-                  onClose={onClose}
+                  onClose={handleRequestClose}
+                  index={index}
                 />
               ))}
             </div>
