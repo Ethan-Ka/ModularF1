@@ -14,6 +14,7 @@ export function useDrivers() {
     queryFn: () => fetchDrivers(sessionKey!, apiKey),
     enabled: !!sessionKey,
     staleTime: Infinity,
+    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
   })
 
   useEffect(() => {

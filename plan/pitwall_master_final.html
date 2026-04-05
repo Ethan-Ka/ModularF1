@@ -229,7 +229,7 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
      position:relative;border-radius:4px;overflow:hidden;margin-bottom:6px}
 .amb-flag{width:24px;height:16px;border-radius:2px;border:0.5px solid rgba(255,255,255,0.1);flex-shrink:0}
 .amb-label{font-family:var(--cond);font-size:16px;font-weight:700;letter-spacing:0.04em;flex:1}
-.amb-toast{font-family:var(--mono);font-size:9px;padding:4px 10px;border-radius:2px;border:0.5px solid}
+.amb-msg{font-family:var(--mono);font-size:9px;letter-spacing:0.04em;color:rgba(242,240,235,0.86);opacity:0.92;white-space:nowrap}
 .amb-glow{position:absolute;bottom:0;left:0;right:0;height:1px}
 
 /* ── phase timeline ── */
@@ -409,7 +409,7 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
 <div class="toc">
   <div class="toc-row"><span class="toc-n">01</span><span class="toc-t">North star & data layer</span><span class="toc-sub">OpenF1 endpoints · rate limits · stack overview</span></div>
   <div class="toc-row"><span class="toc-n">02</span><span class="toc-t">API key system & pricing</span><span class="toc-sub">OpenF1 $10/month · onboarding flow · key storage</span></div>
-  <div class="toc-row"><span class="toc-n">03</span><span class="toc-t">Ambient race layer</span><span class="toc-sub">Flag states · color values · toast timing · leader color · RGB sync</span></div>
+  <div class="toc-row"><span class="toc-n">03</span><span class="toc-t">Ambient race layer</span><span class="toc-sub">Flag states · color values · in-bar text timing · leader color · RGB sync</span></div>
   <div class="toc-row"><span class="toc-n">04</span><span class="toc-t">Window & workspace architecture</span><span class="toc-sub">Workspace vs canvas vs window · multi-monitor scenarios · sync mechanism</span></div>
   <div class="toc-row"><span class="toc-n">05</span><span class="toc-t">Driver management system</span><span class="toc-sub">Three-tier context · focus bar · roles · team colors</span></div>
   <div class="toc-row"><span class="toc-n">06</span><span class="toc-t">Canvas & layout system</span><span class="toc-sub">Drag-and-drop · autosave · layout code format · export/import</span></div>
@@ -486,54 +486,56 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
 ══════════════════════════════════════════════ -->
 <div class="sect"><span class="sect-n">03</span><span class="sect-t">Ambient Race Layer</span><div class="sect-r"></div></div>
 
-<p>The ambient layer is a persistent banner at the top of every canvas view that communicates race state through color. When race state changes, a brief toast notification appears over the banner, shows the relevant race control message, then fades out. After the toast fades, the gradient color continues to carry the meaning passively. Users watching the race on TV should absorb race state through peripheral vision without looking at the app.</p>
+<p>The ambient layer is integrated into the top row of the main canvas container, not rendered as a separate banner block above it. It communicates race state through color and an in-bar status text line. When race state changes, text and color replace the prior state through continuous interpolation only: smooth opacity, position, gradient, and glow transitions with no visual snapping.</p>
 
-<p>Design principle: The toast announces. The gradient remembers. After the text fades, a fan glancing up absorbs race state through color alone — no reading required.</p>
+<p>Design principle: The in-bar text announces. The gradient remembers. Transitions are continuous and calm; there are no snaps in color, text, glow, or pulse state changes.</p>
 
 <div class="sub">State definitions, color values, and priority order</div>
 
 <div class="amb" style="background:#0a1a0e">
   <div class="amb-flag" style="background:#00C850"></div>
   <div class="amb-label" style="color:#4EFF8A">Green flag — racing</div>
-  <div class="amb-toast" style="background:rgba(0,200,80,0.12);border-color:rgba(0,200,80,0.3);color:#4EFF8A">Track is clear — racing conditions <span style="opacity:0.35">→ fading out</span></div>
+  <div class="amb-msg" style="color:#8DFFC0">Track is clear · racing conditions · text remains in-banner and transitions smoothly</div>
   <div class="amb-glow" style="background:linear-gradient(90deg,transparent,#00C850,transparent)"></div>
 </div>
-<div class="amb" style="background:#0f1a0a">
-  <div class="amb-flag" style="background:#00C850"></div>
-  <div class="amb-label" style="color:rgba(78,255,138,0.7)">Green + leader team color (when leader-color mode enabled)</div>
-  <div class="amb-toast" style="background:rgba(54,113,198,0.12);border-color:rgba(54,113,198,0.3);color:#8BB5FF">NOR takes the lead <span style="opacity:0.35">→ fading out</span></div>
-  <div class="amb-glow" style="background:linear-gradient(90deg,transparent,rgba(54,113,198,0.6),transparent)"></div>
+<div class="amb" style="background:linear-gradient(90deg,#2a0a0d 0%,#301012 62%,#3a2c0a 100%)">
+  <div class="amb-flag" style="background:linear-gradient(135deg,#A6132A 55%,#C58A12 55%)"></div>
+  <div class="amb-label" style="color:#E3C27A">Leader team color mode — Ferrari lead (red + yellow livery accents, no green blend)</div>
+  <div class="amb-msg" style="color:#E3C27A">LEC takes the lead · in-banner text crossfades with zero snap</div>
+  <div class="amb-glow" style="background:linear-gradient(90deg,transparent,rgba(166,19,42,0.62),rgba(197,138,18,0.5),transparent)"></div>
 </div>
 <div class="amb" style="background:#1a1500">
   <div class="amb-flag" style="background:#FFD600"></div>
   <div class="amb-label" style="color:#FFE566">Yellow flag</div>
-  <div class="amb-toast" style="background:rgba(255,214,0,0.12);border-color:rgba(255,214,0,0.3);color:#FFE566">Yellow flag — incident T12, GAS <span style="opacity:0.35">→ fading</span></div>
+  <div class="amb-msg" style="color:#FFE566">Yellow flag · incident T12 · GAS</div>
   <div class="amb-glow" style="background:linear-gradient(90deg,transparent,#FFD600,transparent)"></div>
 </div>
 <div class="amb" style="background:#110d00">
   <div class="amb-flag" style="background:linear-gradient(135deg,#FFA500 50%,#222 50%)"></div>
   <div class="amb-label" style="color:#FFB830">Safety car deployed</div>
-  <div class="amb-toast" style="background:rgba(255,165,0,0.12);border-color:rgba(255,165,0,0.3);color:#FFB830">Safety car deployed — maintain delta <span style="opacity:0.35">→ fading</span></div>
+  <div class="amb-msg" style="color:#FFB830">Safety car deployed · maintain delta</div>
   <div class="amb-glow" style="background:linear-gradient(90deg,transparent,#FFA500,transparent)"></div>
 </div>
 <div class="amb" style="background:#100a00">
   <div class="amb-flag" style="background:#E09000"></div>
   <div class="amb-label" style="color:#E09000">Virtual safety car</div>
-  <div class="amb-toast" style="background:rgba(224,144,0,0.1);border-color:rgba(224,144,0,0.3);color:#E09000">Virtual safety car deployed <span style="opacity:0.35">→ fading</span></div>
+  <div class="amb-msg" style="color:#E09000">Virtual safety car deployed</div>
   <div class="amb-glow" style="background:linear-gradient(90deg,transparent,#E09000,transparent)"></div>
 </div>
 <div class="amb" style="background:#1a0404">
   <div class="amb-flag" style="background:#FF1E1E"></div>
   <div class="amb-label" style="color:#FF6060">Red flag — race suspended</div>
-  <div class="amb-toast" style="background:rgba(255,30,30,0.14);border-color:rgba(255,30,30,0.4);color:#FF7070">RED FLAG — all cars return to pit lane immediately <span style="opacity:0.35">→ fading</span></div>
+  <div class="amb-msg" style="color:#FF7070">RED FLAG · all cars return to pit lane immediately</div>
   <div class="amb-glow" style="background:linear-gradient(90deg,transparent,#FF1E1E,transparent)"></div>
 </div>
 <div class="amb" style="background:#100b1a">
   <div class="amb-flag" style="background:linear-gradient(135deg,#9B59F5 50%,#222 50%)"></div>
   <div class="amb-label" style="color:#C89BFF">Fastest lap — VER · 1:14.821</div>
-  <div class="amb-toast" style="background:rgba(155,89,245,0.14);border-color:rgba(155,89,245,0.4);color:#C89BFF">VER sets fastest lap — 1:14.821 <span style="opacity:0.35">→ fading · returns to green after 2.8s</span></div>
+  <div class="amb-msg" style="color:#C89BFF">VER sets fastest lap · 1:14.821 · smoothly returns after 2.8s</div>
   <div class="amb-glow" style="background:linear-gradient(90deg,transparent,#9B59F5,transparent)"></div>
 </div>
+
+<div class="note"><strong>Leader-color differentiation rule:</strong> When leader-color mode is enabled, the ambient bar uses the leader's constructor palette directly (for Ferrari: red + yellow), not a green blend. To avoid confusion with critical flags, leader-mode colors are always rendered as a darker, desaturated "race-state" variant with a split-tone accent and a subtle luminance wave. Red flag and yellow flag keep fully saturated safety colors and always override leader-color mode.</div>
 
 <br>
 <table class="t">
@@ -544,24 +546,24 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
     <tr><td class="tn">3</td><td>Virtual SC</td><td style="font-family:var(--mono);font-size:9px">rgb(224, 144, 0)</td><td style="font-family:var(--mono);font-size:9px">0.8s ease</td><td>Dimmer than full SC. No pulse. Returns on green.</td></tr>
     <tr><td class="tn">4</td><td>Yellow flag</td><td style="font-family:var(--mono);font-size:9px">rgb(255, 214, 0)</td><td style="font-family:var(--mono);font-size:9px">0.8s ease</td><td>Holds until green flag message received from race_control.</td></tr>
     <tr><td class="tn">5</td><td>Fastest lap</td><td style="font-family:var(--mono);font-size:9px">rgb(155, 89, 245)</td><td style="font-family:var(--mono);font-size:9px">0.3s ease</td><td>2.8s duration then returns to current green state.</td></tr>
-    <tr><td class="tn">6</td><td>Lead overtake</td><td style="font-family:var(--mono);font-size:9px">new team color</td><td style="font-family:var(--mono);font-size:9px">0.2s flash</td><td>800ms flash of new leader's team color, then 1.2s transition to settled tint.</td></tr>
-    <tr><td class="tn">7</td><td>Green + leader color</td><td style="font-family:var(--mono);font-size:9px">team color (dynamic)</td><td style="font-family:var(--mono);font-size:9px">1.2s ease</td><td>Base racing state when leader-color mode is enabled. Changes when lead changes.</td></tr>
+    <tr><td class="tn">6</td><td>Lead overtake</td><td style="font-family:var(--mono);font-size:9px">new team color</td><td style="font-family:var(--mono);font-size:9px">0.2s flash</td><td>800ms flash of new leader's team color, then 1.2s transition to a differentiated race-state tint.</td></tr>
+    <tr><td class="tn">7</td><td>Leader team color (racing)</td><td style="font-family:var(--mono);font-size:9px">team color (dynamic, desat -18%, lum -22%)</td><td style="font-family:var(--mono);font-size:9px">1.2s ease</td><td>Base racing state when leader-color mode is enabled. Uses constructor colors directly (no green blend). Includes subtle wave pulse (5.5s cycle, ±6% luminance) so it feels "waving" without becoming distracting.</td></tr>
     <tr><td class="tn">8</td><td>Green — neutral</td><td style="font-family:var(--mono);font-size:9px">rgb(0, 200, 80)</td><td style="font-family:var(--mono);font-size:9px">1.2s ease</td><td>Base racing state when leader-color mode is disabled.</td></tr>
-    <tr><td class="tn">—</td><td>Calm mode</td><td style="font-family:var(--mono);font-size:9px">rgb(237, 232, 220)</td><td style="font-family:var(--mono);font-size:9px">2.0s ease</td><td>Overrides all color events. Flag icon still changes. Text toasts still appear.</td></tr>
+    <tr><td class="tn">—</td><td>Calm mode</td><td style="font-family:var(--mono);font-size:9px">rgb(237, 232, 220)</td><td style="font-family:var(--mono);font-size:9px">2.0s ease</td><td>Overrides all color events. Flag icon still changes. In-banner text still updates smoothly.</td></tr>
     <tr><td class="tn">—</td><td>Checkered flag</td><td style="font-family:var(--mono);font-size:9px">rgb(240, 238, 232)</td><td style="font-family:var(--mono);font-size:9px">1.0s ease</td><td>Warm white for 30 seconds, then fades to off.</td></tr>
   </tbody>
 </table>
 
-<div class="sub">Toast animation timing</div>
-<p>On every state change a pill-shaped toast notification appears over the ambient bar. It shows the race control message text, then disappears. No text persists after the fade. Timing model:</p>
+<div class="sub">In-bar text and transition timing</div>
+<p>On every state change, the integrated status text updates in place inside the ambient strip. Color, text, and glow transition as one continuous motion system. Hard cuts are not allowed. Timing model:</p>
 <table class="t">
   <thead><tr><th style="width:120px">Phase</th><th style="width:120px">Duration</th><th>Behavior</th></tr></thead>
   <tbody>
-    <tr><td class="tn">Gradient transition</td><td style="font-family:var(--mono);font-size:9px">1.2s ease</td><td>Ambient bar color shifts to new state color.</td></tr>
-    <tr><td class="tn">Toast slide in</td><td style="font-family:var(--mono);font-size:9px">300ms ease-out</td><td>Toast slides up from below the bar with simultaneous fade-in.</td></tr>
-    <tr><td class="tn">Toast hold</td><td style="font-family:var(--mono);font-size:9px">2000ms</td><td>Toast is fully visible. Shows race control message text.</td></tr>
-    <tr><td class="tn">Toast fade out</td><td style="font-family:var(--mono);font-size:9px">600ms ease-in</td><td>Toast fades to transparent. After this, no text remains in the bar.</td></tr>
-    <tr><td class="tn">Glow line</td><td style="font-family:var(--mono);font-size:9px">permanent</td><td>A 1px gradient line at the bottom of the bar persists as a passive color signal.</td></tr>
+    <tr><td class="tn">Color interpolation</td><td style="font-family:var(--mono);font-size:9px">1.2s ease-in-out</td><td>Ambient gradient moves continuously from prior state to new state with no abrupt step.</td></tr>
+    <tr><td class="tn">Text crossfade</td><td style="font-family:var(--mono);font-size:9px">420ms</td><td>Current banner text eases out while incoming text eases in with slight vertical interpolation (4px max).</td></tr>
+    <tr><td class="tn">Wave pulse</td><td style="font-family:var(--mono);font-size:9px">5.5s loop</td><td>Leader-color mode applies low-amplitude luminance modulation (±6%) to feel "waving" without distraction.</td></tr>
+    <tr><td class="tn">Glow continuity</td><td style="font-family:var(--mono);font-size:9px">continuous</td><td>Bottom glow never blinks off; it interpolates hue and intensity together with the banner color.</td></tr>
+    <tr><td class="tn">No-snap rule</td><td style="font-family:var(--mono);font-size:9px">global</td><td>Zero snaps anywhere in ambient rendering: no instant color swaps, no hard text swaps, no pulse resets, no glow popping.</td></tr>
   </tbody>
 </table>
 
@@ -570,11 +572,28 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
 <table class="t">
   <thead><tr><th style="width:150px">Event</th><th>Color behavior</th><th style="width:130px">Duration</th></tr></thead>
   <tbody>
-    <tr><td class="tn">Fastest lap</td><td>Brief purple pulse (rgb 155, 89, 245). Toast reads driver name + time + "Fastest lap." Returns to current flag state after 2.8s. If fastest lap occurs during yellow or SC, toast still shows but gradient remains safety color.</td><td style="font-family:var(--mono);font-size:9px">2.8s then returns</td></tr>
-    <tr><td class="tn">Lead overtake</td><td>New leader's team color flashes for 800ms then the bar settles into the new leader's tint over 1.2s. Toast reads "[driver] takes the lead." If leader-color mode is off, no color change — only toast.</td><td style="font-family:var(--mono);font-size:9px">800ms flash + 1.2s settle</td></tr>
+    <tr><td class="tn">Fastest lap</td><td>Brief purple pulse (rgb 155, 89, 245). In-bar text shows driver name + lap time + "fastest lap" (example: "VER fastest lap 1:14.821"). Returns to current flag state after 2.8s. If fastest lap occurs during yellow or SC, text still updates but gradient remains safety color. Developer Menu default trigger uses: "VER fastest lap 1:14.821".</td><td style="font-family:var(--mono);font-size:9px">2.8s then returns</td></tr>
+    <tr><td class="tn">Lead overtake</td><td>New leader's team color flashes for 800ms then the bar settles into the new leader's differentiated race-state tint over 1.2s, after which the subtle wave pulse resumes. In-banner text updates to "[driver] takes the lead" via crossfade. If leader-color mode is off, text still updates with no hard cut.</td><td style="font-family:var(--mono);font-size:9px">800ms flash + 1.2s settle</td></tr>
     <tr><td class="tn">Pit confirmation</td><td>Orange 400ms fade indicating a car has stopped in its pit box. Does not persist.</td><td style="font-family:var(--mono);font-size:9px">400ms</td></tr>
   </tbody>
 </table>
+
+<div class="sub">Planned ceremonial ambient sequences (race start and race end)</div>
+<p>Roadmap extension: add optional ceremonial lighting scenes layered on top of normal ambient state logic. These scenes are event-driven, temporary, and always yield back to safety-critical flags (red, safety car, yellow) without snapping.</p>
+
+<table class="t">
+  <thead><tr><th style="width:170px">Sequence</th><th>Trigger</th><th>Lighting behavior</th><th style="width:130px">Target duration</th></tr></thead>
+  <tbody>
+    <tr><td class="tn">National anthem pre-race</td><td>Manual start from ceremony control panel.</td><td>Hybrid palette model: starts from strict country colors, then applies a softened cinematic mix so the result feels atmospheric instead of a hard static flag. Each color channel gets independent brightness oscillation (phase-offset luminance waves) to mimic cloth-like flag motion. Ambient bar text crossfades to "National anthem".</td><td style="font-family:var(--mono);font-size:9px">60s default</td></tr>
+    <tr><td class="tn">Race start launch scene</td><td>Manual trigger only (Developer Menu and settings quick action). Not timed to official traffic lights.</td><td>Short multi-color launch scene that avoids strict traffic-light synchronization complexity. Sequence ramps smoothly, then settles into current leader team race-state palette (or neutral green if leader color mode is off) with zero snapping.</td><td style="font-family:var(--mono);font-size:9px">5s default</td></tr>
+    <tr><td class="tn">Victory line crossed</td><td>Checkered + winner from position feed.</td><td>Short finish burst, then winner constructor palette scene. Example Ferrari: red base with yellow accent wave. In-bar text crossfades to "[driver] wins" and optional finishing gap/time. Winner is not hard-locked: scene updates if post-race classification changes (penalties/investigations).</td><td style="font-family:var(--mono);font-size:9px">18s default</td></tr>
+    <tr><td class="tn">Podium cooldown</td><td>Automatic follow-on after victory sequence (optional manual retrigger).</td><td>Reduced-intensity winner palette shimmer with long wave cycle for room ambience while post-race analysis continues. Automatically times out to checkered baseline.</td><td style="font-family:var(--mono);font-size:9px">120s default</td></tr>
+  </tbody>
+</table>
+
+<div class="note"><strong>Priority and safety rules:</strong> Ceremonial scenes are lower priority than safety states. If red/yellow/SC arrives during any scene, ceremonial output crossfades out immediately and safety color takes over with no snap. When safety clears, the system resumes normal race-state logic (leader-color mode or green neutral).</div>
+
+<div class="note"><strong>Controls model:</strong> Ceremonial lighting uses per-scene toggles plus a global master toggle. Intensity is shared with the main ambient layer (single slider) so brightness behavior stays consistent across race-state and ceremony scenes.</div>
 
 <div class="sub">RGB light output</div>
 <p>A local Node bridge process runs on the user's LAN, receiving color commands via WebSocket from Pitwall and translating to device-specific protocols. The browser never communicates directly with smart light APIs. Publishing to an MQTT topic means Home Assistant and Node-RED users get integration without Pitwall building every device connector.</p>
@@ -1402,9 +1421,9 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
 <div class="w-entry">
   <div class="w-head"><div class="w-id">W.4</div><div class="w-name">Weather Radar</div><div class="w-tags"><span class="tag t-blue">Live</span><span class="tag t-teal">Windy embed</span></div><div class="w-size">min 2×2</div></div>
   <div class="w-body">
-    <div class="w-desc">Embeds the Windy interactive weather radar map via iframe, pre-locked to the current circuit's geographic coordinates. The embed URL is constructed from the circuit lat/lng in the circuit database, matched against the circuit name from the active session's meetings data. Users can scroll and zoom freely within the embedded map. The layer selector in the widget footer switches between rain, wind, cloud, pressure, and temperature overlays. An optional rain alert threshold, configurable in widget settings, triggers the ambient bar "rain approaching" toast when rain is detected within a set radius of the circuit.</div>
+    <div class="w-desc">Embeds the Windy interactive weather radar map via iframe, pre-locked to the current circuit's geographic coordinates. The embed URL is constructed from the circuit lat/lng in the circuit database, matched against the circuit name from the active session's meetings data. Users can scroll and zoom freely within the embedded map. The layer selector in the widget footer switches between rain, wind, cloud, pressure, and temperature overlays. An optional rain alert threshold, configurable in widget settings, updates the ambient bar in-banner status text to "rain approaching" when rain is detected within a set radius of the circuit.</div>
     <div class="row"><div class="rl">Embed URL</div><div class="rv"><code>https://embed.windy.com/config/map?lat={lat}&amp;lon={lon}&amp;zoom=11&amp;level=surface&amp;overlay=rain&amp;menu=false&amp;marker=true</code></div></div>
-    <div class="row"><div class="rl">Auth</div><div class="rv">Windy free embed tier requires no API key for the basic map. Optional Windy Forecast API key enables programmatic rain threshold polling for the ambient toast.</div></div>
+    <div class="row"><div class="rl">Auth</div><div class="rv">Windy free embed tier requires no API key for the basic map. Optional Windy Forecast API key enables programmatic rain threshold polling for ambient banner text updates.</div></div>
     <div class="row"><div class="rl">Circuit database</div><div class="rv">All current F1 circuit coordinates bundled as a static JSON asset. If a circuit is absent, a manual coordinate entry field appears in the widget footer. User-entered coordinates persist in workspace settings.</div></div>
     <div class="row"><div class="rl">Layers</div><div class="rv">Rain (default) · Wind · Cloud cover · Pressure · Temperature · Selected via footer toolbar</div></div>
   </div>
@@ -1609,7 +1628,7 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
   <div class="step">Construct the Windy embed URL with the lat/lng as both the map center and the detail marker position.</div>
   <div class="step">Render the iframe. The Windy free embed tier requires no API key for the map itself.</div>
   <div class="step">If the circuit is not in the database, show a manual coordinate entry field in the widget footer. User-entered values persist in workspace settings.</div>
-  <div class="step">Optional: use Windy Forecast API (separate paid key) to poll rain probability at circuit coordinates every 5 minutes. When probability exceeds the configured threshold, fire the ambient bar "rain approaching" toast.</div>
+  <div class="step">Optional: use Windy Forecast API (separate paid key) to poll rain probability at circuit coordinates every 5 minutes. When probability exceeds the configured threshold, update the ambient bar in-banner status text to "rain approaching" with smooth crossfade.</div>
 </div>
 
 <hr class="rule">
@@ -1896,7 +1915,7 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
   <div class="phase-body">
     <div class="phase-label">Phase 1 — Foundation</div>
     <div class="phase-title">Canvas + core widgets</div>
-    <div class="phase-detail">API key onboarding screen · Drag-and-drop canvas with named tabs · Autosave and layout export/import · Session selector · Driver manager panel · Focus bar · Ambient bar with flag states and toast system · Lap Delta Tower · Full Track Map · Tyre Intelligence (cliff formula) · Weather Dashboard · Weather Radar (Windy embed) · Running Order Strip · Race Control Feed</div>
+    <div class="phase-detail">API key onboarding screen · Drag-and-drop canvas with named tabs · Autosave and layout export/import · Session selector · Driver manager panel · Focus bar · Ambient bar with flag states and in-banner status text system · Lap Delta Tower · Full Track Map · Tyre Intelligence (cliff formula) · Weather Dashboard · Weather Radar (Windy embed) · Running Order Strip · Race Control Feed</div>
 
     <div class="cc-block">
       <div class="cc-head"><div class="cc-head-dot"></div>Claude Code — Phase 1 build instructions</div>
@@ -1937,7 +1956,7 @@ code{font-family:var(--mono);font-size:10px;color:var(--red);
           <div class="cc-n">05</div>
           <div class="cc-body">
             <span class="cc-label">Build the Ambient Bar</span>
-            Implement the ambient bar as a full-width strip above the canvas. It holds: a flag state machine driven by <code>/race_control</code> (green / yellow / SC / red / VSC / checkered / fastest-lap), a background gradient that transitions to the current flag color, a toast queue system for race events (lead changes, fastest laps, incidents), and a leader team color mode that tints the bar to the race leader's constructor color. Transitions use CSS keyframes — no animation library.
+            Implement the ambient bar as an integrated strip in the canvas top row. It holds: a flag state machine driven by <code>/race_control</code> (green / yellow / SC / red / VSC / checkered / fastest-lap), a background gradient that transitions to the current flag color, an in-bar status text animation system for race events (lead changes, fastest laps with driver + lap time, incidents), and a leader team color mode that tints the bar to the race leader's constructor color. All transitions are continuously interpolated with a strict zero-snap rule for color, text, and glow.
             <span class="cc-files">src/components/AmbientBar/AmbientBar.tsx · src/components/AmbientBar/flagStateMachine.ts · src/components/AmbientBar/ToastQueue.tsx</span>
           </div>
         </div>

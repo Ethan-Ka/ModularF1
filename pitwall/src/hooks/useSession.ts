@@ -2,12 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchSessions, fetchLatestSession } from '../api/openf1'
 import { useSessionStore } from '../store/sessionStore'
 
+const noRetry429 = (failureCount: number, error: unknown) =>
+  (error as any)?.status !== 429 && failureCount < 2
+
 export function useSessions(year?: number) {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
   return useQuery({
     queryKey: ['sessions', year],
     queryFn: () => fetchSessions({ year }, apiKey),
     staleTime: 60_000,
+    retry: noRetry429,
   })
 }
 
@@ -19,5 +23,6 @@ export function useLatestSession() {
     queryFn: () => fetchLatestSession(apiKey),
     staleTime: 30_000,
     refetchInterval: mode === 'live' ? 60_000 : false,
+    retry: noRetry429,
   })
 }

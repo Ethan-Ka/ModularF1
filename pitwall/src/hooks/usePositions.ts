@@ -23,7 +23,8 @@ export function usePositions() {
     },
     enabled: !!sessionKey,
     staleTime: 3_000,
-    refetchInterval: mode === 'live' ? 3_000 : false,
+    refetchInterval: mode === 'live' ? 5_000 : false,
+    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
   })
 }
 

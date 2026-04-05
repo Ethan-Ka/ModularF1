@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLogStore, type LogLevel, type LogEntry } from '../../store/logStore'
+import { useAmbientStore, type FlagState } from '../../store/ambientStore'
+import { useSessionStore } from '../../store/sessionStore'
 
 const ALL_LEVELS: LogLevel[] = ['ERR', 'WARN', 'INFO', 'DBG']
 
@@ -80,10 +82,217 @@ function LogRow({ entry }: { entry: LogEntry }) {
   )
 }
 
+// ─── DEV Panel ───────────────────────────────────────────────────────────────
+
+const FLAG_STATES: FlagState[] = [
+  'NONE',
+  'GREEN',
+  'YELLOW',
+  'SAFETY_CAR',
+  'VIRTUAL_SC',
+  'RED',
+  'FASTEST_LAP',
+  'CHECKERED',
+]
+
+function flagButtonColor(flag: FlagState): string {
+  switch (flag) {
+    case 'RED':       return 'var(--red)'
+    case 'YELLOW':
+    case 'VIRTUAL_SC':
+    case 'SAFETY_CAR': return 'var(--amber)'
+    case 'GREEN':     return 'var(--green)'
+    case 'FASTEST_LAP': return 'var(--purple)'
+    default:          return 'var(--muted2)'
+  }
+}
+
+function DevPanel() {
+  const mode = useSessionStore((s) => s.mode)
+  const activeSession = useSessionStore((s) => s.activeSession)
+  const ambientLayerEnabled   = useAmbientStore((s) => s.ambientLayerEnabled)
+  const ambientLayerIntensity = useAmbientStore((s) => s.ambientLayerIntensity)
+
+  return (
+    <div style={{
+      height: 136,
+      borderTop: '0.5px solid var(--border2)',
+      background: 'var(--bg)',
+      padding: '8px 12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+      flexShrink: 0,
+    }}>
+      {/* Row 1: Ambient flag simulator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--muted2)',
+          flexShrink: 0,
+          width: 52,
+        }}>
+          Ambient
+        </span>
+        {FLAG_STATES.map((flag) => {
+          const color = flagButtonColor(flag)
+          return (
+            <button
+              key={flag}
+              onClick={() => useAmbientStore.getState().setFlagState(flag)}
+              style={{
+                padding: '1px 6px',
+                borderRadius: 2,
+                border: `0.5px solid ${color}`,
+                background: 'transparent',
+                fontFamily: 'var(--mono)',
+                fontSize: 7,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color,
+                cursor: 'pointer',
+                transition: 'background 0.1s',
+              }}
+            >
+              {flag}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Row 2: Toast test + App state */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <button
+          onClick={() => useAmbientStore.getState().addToast('Test toast from dev panel', 'GREEN')}
+          style={{
+            padding: '2px 8px',
+            borderRadius: 2,
+            border: '0.5px solid var(--border2)',
+            background: 'var(--bg4)',
+            fontFamily: 'var(--mono)',
+            fontSize: 7,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--muted)',
+            cursor: 'pointer',
+          }}
+        >
+          Fire toast
+        </button>
+
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          color: 'var(--muted2)',
+          letterSpacing: '0.06em',
+        }}>
+          mode: <span style={{ color: 'var(--muted)' }}>{mode}</span>
+        </span>
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          color: 'var(--muted2)',
+          letterSpacing: '0.06em',
+        }}>
+          session: <span style={{ color: 'var(--muted)' }}>{activeSession?.session_key ?? 'none'}</span>
+        </span>
+      </div>
+
+      {/* Row 3: Ambient layer controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--muted2)',
+          flexShrink: 0,
+          width: 52,
+        }}>
+          Ambient Layer
+        </span>
+
+        {/* ON / OFF toggle */}
+        {(['ON', 'OFF'] as const).map((label) => {
+          const active = label === 'ON' ? ambientLayerEnabled : !ambientLayerEnabled
+          const color  = active ? 'var(--green, #00C850)' : 'var(--muted2)'
+          return (
+            <button
+              key={label}
+              onClick={() => useAmbientStore.getState().setAmbientLayerEnabled(label === 'ON')}
+              style={{
+                padding: '1px 6px',
+                borderRadius: 2,
+                border: `0.5px solid ${color}`,
+                background: active ? 'rgba(0,200,80,0.08)' : 'transparent',
+                fontFamily: 'var(--mono)',
+                fontSize: 7,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color,
+                cursor: 'pointer',
+                transition: 'background 0.1s, border-color 0.1s, color 0.1s',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+
+        {/* Divider */}
+        <span style={{ color: 'var(--muted2)', fontSize: 7, fontFamily: 'var(--mono)' }}>|</span>
+
+        {/* Intensity presets */}
+        {([25, 50, 75, 100] as const).map((pct) => {
+          const active = ambientLayerIntensity === pct
+          const color  = active ? 'var(--white)' : 'var(--muted2)'
+          return (
+            <button
+              key={pct}
+              onClick={() => useAmbientStore.getState().setAmbientLayerIntensity(pct)}
+              style={{
+                padding: '1px 6px',
+                borderRadius: 2,
+                border: `0.5px solid ${active ? 'var(--border2)' : 'var(--border)'}`,
+                background: active ? 'var(--bg4)' : 'transparent',
+                fontFamily: 'var(--mono)',
+                fontSize: 7,
+                letterSpacing: '0.08em',
+                color,
+                cursor: 'pointer',
+                transition: 'background 0.1s, border-color 0.1s, color 0.1s',
+              }}
+            >
+              {pct}%
+            </button>
+          )
+        })}
+
+        {/* Current intensity readout */}
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          color: 'var(--muted2)',
+          letterSpacing: '0.06em',
+          marginLeft: 4,
+        }}>
+          {ambientLayerIntensity}%
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
   const entries = useLogStore((s) => s.entries)
   const clear = useLogStore((s) => s.clear)
   const [activeFilters, setActiveFilters] = useState<Set<LogLevel>>(new Set(ALL_LEVELS))
+  const [devOpen, setDevOpen] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom on new entries
@@ -123,13 +332,14 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
       left: 0,
       right: 0,
       bottom: 0,
-      height: 240,
+      height: devOpen ? 376 : 240,
       background: 'var(--bg3)',
       borderTop: '0.5px solid var(--border2)',
       zIndex: 300,
       display: 'flex',
       flexDirection: 'column',
       boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
+      transition: 'height 0.15s ease',
     }}>
       {/* Header bar */}
       <div style={{
@@ -178,6 +388,26 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
         ))}
 
         <div style={{ flex: 1 }} />
+
+        {/* DEV toggle */}
+        <button
+          onClick={() => setDevOpen((v) => !v)}
+          style={{
+            background: devOpen ? 'rgba(139,92,246,0.15)' : 'none',
+            border: `0.5px solid ${devOpen ? 'var(--purple)' : 'var(--border)'}`,
+            borderRadius: 2,
+            padding: '1px 8px',
+            fontFamily: 'var(--mono)',
+            fontSize: 7,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: devOpen ? 'var(--purple)' : 'var(--muted2)',
+            cursor: 'pointer',
+            transition: 'all 0.1s',
+          }}
+        >
+          DEV
+        </button>
 
         {/* Export JSON */}
         <button
@@ -260,6 +490,9 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
           filtered.map((entry) => <LogRow key={entry.id} entry={entry} />)
         )}
       </div>
+
+      {/* DEV controls panel */}
+      {devOpen && <DevPanel />}
     </div>
   )
 }

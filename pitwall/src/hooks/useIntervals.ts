@@ -21,7 +21,8 @@ export function useIntervals() {
       return Array.from(map.values())
     },
     enabled: !!sessionKey,
-    staleTime: 2_000,
-    refetchInterval: mode === 'live' ? 2_000 : false,
+    staleTime: 5_000,
+    refetchInterval: mode === 'live' ? 8_000 : false,
+    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
   })
 }

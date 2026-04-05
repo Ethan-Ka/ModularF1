@@ -30,8 +30,9 @@ export function useRaceControl() {
     queryKey: ['race_control', sessionKey],
     queryFn: () => fetchRaceControl(sessionKey!, apiKey),
     enabled: !!sessionKey,
-    staleTime: 5_000,
-    refetchInterval: mode === 'live' ? 5_000 : false,
+    staleTime: 10_000,
+    refetchInterval: mode === 'live' ? 10_000 : false,
+    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
   })
 
   useEffect(() => {

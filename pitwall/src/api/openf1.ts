@@ -3,6 +3,7 @@
 // Live data requires Bearer token. Historical (2023+) is free.
 
 import { useAmbientStore } from '../store/ambientStore'
+import { useSessionStore } from '../store/sessionStore'
 
 const BASE_URL = 'https://api.openf1.org/v1'
 const RATE_LIMIT_TOAST_COOLDOWN_MS = 15_000
@@ -137,6 +138,12 @@ async function openf1Fetch<T>(
   params: Record<string, string | number | undefined | 'latest'> = {},
   apiKey?: string
 ): Promise<T[]> {
+  if (!useSessionStore.getState().apiRequestsEnabled) {
+    const err = new Error(`OpenF1 request blocked by developer toggle: ${path}`)
+    ;(err as any).status = 499
+    throw err
+  }
+
   const url = new URL(`${BASE_URL}${path}`)
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined) url.searchParams.set(k, String(v))

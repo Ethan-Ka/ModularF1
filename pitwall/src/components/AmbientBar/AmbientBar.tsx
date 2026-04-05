@@ -1,4 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
 import { useAmbientStore } from '../../store/ambientStore'
+import { useDriverStore } from '../../store/driverStore'
+import { resolveTeamPalette } from '../../lib/teamPalette'
 import { FLAG_COLORS, getFlagLabel, getTransitionDuration } from './flagStateMachine'
 import { ToastQueue } from './ToastQueue'
 
@@ -46,76 +49,219 @@ function blendHex(base: string, tint: string, ratio: number): string {
   }
 }
 
-export function AmbientBar() {
-  const flagState = useAmbientStore((s) => s.flagState)
-  const leaderColorMode = useAmbientStore((s) => s.leaderColorMode)
-  const leaderColor = useAmbientStore((s) => s.leaderColor)
-  const toasts = useAmbientStore((s) => s.toasts)
+// Convert hex/rgb colors into rgba with a target alpha.
+function withAlpha(color: string, alpha: number): string {
+  const a = Math.max(0, Math.min(1, alpha))
+  const hex = color.trim()
+  if (hex.startsWith('#')) {
+    const h = hex.replace('#', '')
+    if (h.length === 6) {
+      const r = parseInt(h.slice(0, 2), 16)
+      const g = parseInt(h.slice(2, 4), 16)
+      const b = parseInt(h.slice(4, 6), 16)
+      return `rgba(${r},${g},${b},${a})`
+    }
+  }
 
-  const colors = FLAG_COLORS[flagState]
-  const label = getFlagLabel(flagState)
+  const rgbMatch = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i)
+  if (rgbMatch) {
+    return `rgba(${rgbMatch[1]},${rgbMatch[2]},${rgbMatch[3]},${a})`
+  }
+
+  return color
+}
+
+type MsgPhase = 'idle' | 'in' | 'hold' | 'out'
+
+type AmbientBarProps = {
+  embedded?: boolean
+  toolbar?: boolean
+}
+
+export function AmbientBar({ embedded = false, toolbar = false }: AmbientBarProps) {
+  const flagState      = useAmbientStore((s) => s.flagState)
+  const leaderColorMode = useAmbientStore((s) => s.leaderColorMode)
+  const leaderColor    = useAmbientStore((s) => s.leaderColor)
+  const leaderDriverNumber = useAmbientStore((s) => s.leaderDriverNumber)
+  const toasts         = useAmbientStore((s) => s.toasts)
+  const bannerMessage  = useAmbientStore((s) => s.bannerMessage)
+  const getDriver      = useDriverStore((s) => s.getDriver)
+
+  // In-bar message animation state
+  const [msgText, setMsgText]   = useState('')
+  const [msgPhase, setMsgPhase] = useState<MsgPhase>('idle')
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const greenHandoffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [leaderHandoffReady, setLeaderHandoffReady] = useState(flagState !== 'GREEN')
+
+  // Start animation whenever a new banner message arrives
+  useEffect(() => {
+    if (!bannerMessage) return
+
+    // Clear any in-flight timers from the previous message
+    timersRef.current.forEach(clearTimeout)
+    timersRef.current = []
+
+    setMsgText(bannerMessage.text)
+    setMsgPhase('in')
+
+    timersRef.current = [
+      setTimeout(() => setMsgPhase('hold'), 300),
+      setTimeout(() => setMsgPhase('out'),  2300),
+      setTimeout(() => { setMsgPhase('idle'); setMsgText('') }, 2900),
+    ]
+  }, [bannerMessage?.id]) // re-run only when a new event fires
+
+  // GREEN should show first, then hand off to leader color to avoid mixed states.
+  useEffect(() => {
+    if (greenHandoffTimerRef.current) {
+      clearTimeout(greenHandoffTimerRef.current)
+      greenHandoffTimerRef.current = null
+    }
+
+    if (flagState === 'GREEN') {
+      setLeaderHandoffReady(false)
+      greenHandoffTimerRef.current = setTimeout(() => {
+        setLeaderHandoffReady(true)
+      }, 950)
+      return
+    }
+
+    setLeaderHandoffReady(true)
+  }, [flagState])
+
+  const colors   = FLAG_COLORS[flagState]
+  const label    = getFlagLabel(flagState)
   const duration = getTransitionDuration(flagState)
 
-  // Compute background — possibly tinted by leader color in GREEN mode
-  let bgColor = colors.background
-  if (flagState === 'GREEN' && leaderColorMode && leaderColor) {
-    bgColor = blendHex(colors.background, leaderColor, 0.18)
+  const applyLeaderTint = flagState === 'GREEN' && leaderColorMode && !!leaderColor && leaderHandoffReady
+  const leaderTeamName = leaderDriverNumber != null ? getDriver(leaderDriverNumber)?.team_name ?? null : null
+  const leaderPalette = resolveTeamPalette(leaderTeamName, leaderColor)
+  const leaderPrimaryBlend = applyLeaderTint && leaderPalette
+    ? blendHex(colors.background, leaderPalette.primary, 0.2)
+    : null
+  const leaderSecondaryBlend = applyLeaderTint && leaderPalette?.secondary
+    ? blendHex(colors.background, leaderPalette.secondary, 0.2)
+    : null
+
+  // Background — possibly tinted by leader palette in GREEN mode
+  let bgFill: string = colors.background
+  if (leaderPrimaryBlend && leaderPalette) {
+    if (leaderSecondaryBlend) {
+      bgFill = `linear-gradient(120deg, ${leaderPrimaryBlend} 0%, ${leaderPrimaryBlend} 58%, ${leaderSecondaryBlend} 100%)`
+    } else {
+      bgFill = leaderPrimaryBlend
+    }
   }
 
   // Pulse animation
   let pulseAnimation: string | undefined
   if (colors.pulse) {
-    if (colors.pulseHz === 1) {
-      pulseAnimation = 'ambientPulse1hz 1s ease-in-out infinite'
-    } else if (colors.pulseHz === 0.5) {
-      pulseAnimation = 'ambientPulse05hz 2s ease-in-out infinite'
-    }
+    pulseAnimation = colors.pulseHz === 1
+      ? 'ambientPulse1hz 1s ease-in-out infinite'
+      : 'ambientPulse05hz 2s ease-in-out infinite'
   }
+
+  // Message text visibility
+  const msgVisible = msgPhase === 'in' || msgPhase === 'hold'
+  const msgOpacity = msgPhase === 'hold' ? 1 : 0
+  const msgY       = msgPhase === 'in' ? '6px' : '0px'
+  const compact = embedded || toolbar
+  const embeddedBgAlpha = toolbar
+    ? (flagState === 'GREEN' ? 0.42 : flagState === 'NONE' ? 0.06 : 0.34)
+    : (flagState === 'GREEN' ? 0.64 : flagState === 'NONE' ? 0.08 : 0.5)
+
+  const textColor = applyLeaderTint
+    ? (leaderPalette?.secondary ?? leaderPalette?.primary ?? colors.text)
+    : colors.text
+
+  // Keep the flag swatch semantically green even when leader colors are active.
+  const swatchBackground =
+    colors.flagColor === 'transparent' ? 'var(--border2)' : colors.flagColor
+
+  const compactBackground = compact
+    ? (leaderPrimaryBlend
+        ? (leaderSecondaryBlend
+            ? `linear-gradient(120deg, ${withAlpha(leaderPrimaryBlend, embeddedBgAlpha)} 0%, ${withAlpha(leaderPrimaryBlend, embeddedBgAlpha)} 58%, ${withAlpha(leaderSecondaryBlend, embeddedBgAlpha)} 100%)`
+            : withAlpha(leaderPrimaryBlend, embeddedBgAlpha))
+        : withAlpha(bgFill, embeddedBgAlpha))
+    : bgFill
 
   return (
     <div
       style={{
         position: 'relative',
-        height: 50,
+        height: toolbar ? '100%' : embedded ? 28 : 50,
         width: '100%',
-        background: bgColor,
-        transition: `background ${duration} ease`,
+        background: compactBackground,
+        border: undefined,
+        borderRadius: toolbar ? 0 : embedded ? 4 : 0,
+        transition: `background ${duration} ease, border-color ${duration} ease`,
         display: 'flex',
         alignItems: 'center',
-        paddingInline: 16,
-        gap: 12,
+        paddingInline: toolbar ? 14 : embedded ? 8 : 16,
+        gap: compact ? 8 : 12,
         flexShrink: 0,
-        animation: pulseAnimation,
+        animation: compact ? undefined : pulseAnimation,
+        overflow: 'hidden',
+        pointerEvents: 'none',
       }}
     >
       {/* Flag swatch */}
       <div style={{
-        width: 24,
-        height: 16,
+        width: compact ? 18 : 24,
+        height: compact ? 12 : 16,
         borderRadius: 2,
-        background: colors.flagColor === 'transparent' ? 'var(--border2)' : colors.flagColor,
+        background: swatchBackground,
         flexShrink: 0,
         boxShadow: colors.flagColor !== 'transparent' ? `0 0 8px ${colors.glow}66` : undefined,
         transition: `background ${duration} ease`,
       }} />
 
-      {/* Flag state label */}
+      {/* Flag state label — fades out when a message is showing */}
       <span style={{
-        flex: 1,
         fontFamily: 'var(--mono)',
-        fontSize: 10,
+        fontSize: compact ? 8 : 10,
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: colors.text,
-        transition: `color ${duration} ease`,
+        color: textColor,
+        transition: `color ${duration} ease, opacity 0.2s ease`,
+        opacity: msgVisible ? 0 : 1,
+        userSelect: 'none',
+        flexShrink: 0,
       }}>
         {label}
       </span>
 
-      {/* Toast queue on the right */}
-      <div style={{ flexShrink: 0 }}>
-        <ToastQueue toasts={toasts} />
-      </div>
+      {/* In-bar animated event message */}
+      {msgText && (
+        <span style={{
+          position: 'absolute',
+          left: compact ? 36 : 52,
+          fontFamily: 'var(--mono)',
+          fontSize: compact ? 8 : 10,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: textColor,
+          opacity: msgOpacity,
+          transform: `translateY(${msgY})`,
+          transition: `opacity ${msgPhase === 'out' ? '0.6s ease-in' : '0.3s ease-out'}, transform 0.3s ease-out`,
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          maxWidth: compact ? 'calc(100% - 40px)' : 'calc(100% - 120px)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {msgText}
+        </span>
+      )}
+
+      {/* Dev/system toast queue — only for addToast() calls, not flag events */}
+      {!compact && (
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <ToastQueue toasts={toasts} />
+        </div>
+      )}
 
       {/* Bottom glow line */}
       <div style={{
@@ -124,11 +270,15 @@ export function AmbientBar() {
         left: 0,
         right: 0,
         height: 1,
-        background: colors.flagColor === 'transparent'
+        background: (applyLeaderTint && leaderPalette)
+          ? (leaderPalette.secondary
+              ? `linear-gradient(90deg, transparent 0%, ${withAlpha(leaderPalette.primary, 0.52)} 26%, ${leaderPalette.primary} 42%, ${leaderPalette.secondary} 58%, ${withAlpha(leaderPalette.secondary, 0.52)} 74%, transparent 100%)`
+              : `linear-gradient(90deg, transparent 0%, ${withAlpha(leaderPalette.primary, 0.52)} 30%, ${leaderPalette.primary} 50%, ${withAlpha(leaderPalette.primary, 0.52)} 70%, transparent 100%)`)
+          : colors.flagColor === 'transparent'
           ? 'var(--border)'
           : `linear-gradient(90deg, transparent 0%, ${colors.glow}88 30%, ${colors.glow} 50%, ${colors.glow}88 70%, transparent 100%)`,
         transition: `background ${duration} ease`,
-        animation: colors.pulse ? 'glowLinePulse 1s ease-in-out infinite' : undefined,
+        animation: !compact && colors.pulse ? 'glowLinePulse 1s ease-in-out infinite' : undefined,
       }} />
     </div>
   )

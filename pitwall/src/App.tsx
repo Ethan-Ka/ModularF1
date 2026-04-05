@@ -6,10 +6,13 @@ import { useDriverStore } from './store/driverStore'
 import { useLogStore } from './store/logStore'
 import { ApiKeyOnboarding } from './screens/ApiKeyOnboarding'
 import { AmbientBar } from './components/AmbientBar/AmbientBar'
+import { AmbientRaceLayer } from './components/AmbientRaceLayer/AmbientRaceLayer'
 import { FocusStrip } from './components/DriverManager/FocusStrip'
 import { CanvasTabs } from './components/Canvas/CanvasTabs'
 import { Canvas } from './components/Canvas/Canvas'
 import { DiagnosticLog } from './components/DiagnosticLog/DiagnosticLog'
+import { SettingsPanel } from './components/SettingsPanel/SettingsPanel'
+import { SessionBrowserModal } from './components/SessionBrowser/SessionBrowserModal'
 import { useDrivers } from './hooks/useDrivers'
 import { useLatestSession } from './hooks/useSession'
 import { useRaceControl } from './hooks/useRaceControl'
@@ -36,7 +39,7 @@ function DataLayer() {
 
   const { data: latestSession } = useLatestSession()
   const { activeSession, setActiveSession, mode } = useSessionStore()
-  const { setLeader } = useAmbientStore()
+  const { setLeader, flagState, setFlagState } = useAmbientStore()
   const { getTeamColor } = useDriverStore()
   const { data: positions } = usePositions()
 
@@ -56,6 +59,15 @@ function DataLayer() {
       setLeader(leader.driver_number, color)
     }
   }, [positions, getTeamColor, setLeader])
+
+  // Live race sessions should never idle in NONE ambient state.
+  useEffect(() => {
+    const sessionName = activeSession?.session_name ?? ''
+    const isRaceSession = /race/i.test(sessionName)
+    if (mode === 'live' && isRaceSession && flagState === 'NONE') {
+      setFlagState('GREEN', 'Green flag')
+    }
+  }, [mode, activeSession?.session_name, flagState, setFlagState])
 
   return null
 }
@@ -141,6 +153,8 @@ function MainLayout() {
   const { tabs, activeTabId } = useWorkspaceStore()
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0]
   const [logOpen, setLogOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [sessionBrowserOpen, setSessionBrowserOpen] = useState(false)
   const logEntries = useLogStore((s) => s.entries)
   const hasErrors = logEntries.some((e) => e.level === 'ERR')
 
@@ -150,45 +164,122 @@ function MainLayout() {
       flexDirection: 'column',
       height: '100vh',
       overflow: 'hidden',
-      background: 'var(--bg)',
     }}>
-      {/* Ambient bar */}
-      <AmbientBar />
+      {/* Full-screen ambient race layer — sits behind all UI */}
+      <AmbientRaceLayer />
 
       {/* Toolbar — also serves as Electron drag region */}
       <div style={{
-        height: 40,
+        height: 42,
         background: 'var(--bg2)',
         borderBottom: '0.5px solid var(--border)',
-        display: 'flex',
+        position: 'relative',
         alignItems: 'center',
         paddingInline: 14,
-        gap: 12,
         flexShrink: 0,
         // @ts-ignore — Electron CSS property for window dragging
         WebkitAppRegion: 'drag',
       }}>
-        {/* Logo */}
-        <div style={{
-          fontFamily: 'var(--cond)',
-          fontSize: 20,
-          fontWeight: 800,
-          letterSpacing: '-0.01em',
-          lineHeight: 1,
-          userSelect: 'none',
-        }}>
-          PIT<span style={{ color: 'var(--red)' }}>W</span>ALL
+        {/* Full-width ambient strip integrated into toolbar background */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+            // @ts-ignore
+            WebkitAppRegion: 'no-drag',
+          }}
+        >
+          <AmbientBar embedded toolbar />
         </div>
 
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <SessionSelector />
-        </div>
+        {/* Toolbar foreground content */}
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            height: '100%',
+            display: 'grid',
+            gridTemplateColumns: '1fr auto 1fr',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              minWidth: 260,
+              maxWidth: '52vw',
+              // @ts-ignore
+              WebkitAppRegion: 'no-drag',
+            }}
+          >
+            {/* Logo hidden for now but kept in markup for later reuse */}
+            <div
+              aria-hidden="true"
+              style={{
+                display: 'none',
+                fontFamily: 'var(--cond)',
+                fontSize: 20,
+                fontWeight: 800,
+                letterSpacing: '-0.01em',
+                lineHeight: 1,
+                userSelect: 'none',
+              }}
+            >
+              PIT<span style={{ color: 'var(--red)' }}>W</span>ALL
+            </div>
+          </div>
 
-        {/* New window button — only shown when running inside Electron */}
-        {window.electronAPI && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              cursor: 'pointer',
+              // @ts-ignore
+              WebkitAppRegion: 'no-drag',
+            }}
+            onClick={() => setSessionBrowserOpen(true)}
+          >
+            <SessionSelector />
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 12,
+              // @ts-ignore
+              WebkitAppRegion: 'no-drag',
+            }}
+          >
+          {/* New window button — only shown when running inside Electron */}
+          {window.electronAPI && (
+            <button
+              onClick={() => window.electronAPI!.openNewWindow().catch(() => {})}
+              title="Open new window"
+              style={{
+                background: 'none',
+                border: '0.5px solid var(--border)',
+                borderRadius: 3,
+                padding: '4px 10px',
+                fontFamily: 'var(--mono)',
+                fontSize: 8,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--muted2)',
+                cursor: 'pointer',
+              }}
+            >
+              + Window
+            </button>
+          )}
+
+          {/* LOG button */}
           <button
-            onClick={() => window.electronAPI!.openNewWindow()}
-            title="Open new window"
+            onClick={() => setLogOpen((v) => !v)}
             style={{
               background: 'none',
               border: '0.5px solid var(--border)',
@@ -198,56 +289,33 @@ function MainLayout() {
               fontSize: 8,
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
-              color: 'var(--muted2)',
+              color: hasErrors ? 'var(--red)' : 'var(--muted2)',
               cursor: 'pointer',
-              // @ts-ignore
-              WebkitAppRegion: 'no-drag',
             }}
           >
-            + Window
+            LOG
           </button>
-        )}
 
-        {/* LOG button */}
-        <button
-          onClick={() => setLogOpen((v) => !v)}
-          style={{
-            background: 'none',
-            border: '0.5px solid var(--border)',
-            borderRadius: 3,
-            padding: '4px 10px',
-            fontFamily: 'var(--mono)',
-            fontSize: 8,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: hasErrors ? 'var(--red)' : 'var(--muted2)',
-            cursor: 'pointer',
-            // @ts-ignore
-            WebkitAppRegion: 'no-drag',
-          }}
-        >
-          LOG
-        </button>
-
-        {/* Settings button */}
-        <button
-          style={{
-            background: 'none',
-            border: '0.5px solid var(--border)',
-            borderRadius: 3,
-            padding: '4px 10px',
-            fontFamily: 'var(--mono)',
-            fontSize: 8,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--muted)',
-            cursor: 'pointer',
-            // @ts-ignore
-            WebkitAppRegion: 'no-drag',
-          }}
-        >
-          Settings
-        </button>
+          {/* Settings button */}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            style={{
+              background: 'none',
+              border: '0.5px solid var(--border)',
+              borderRadius: 3,
+              padding: '4px 10px',
+              fontFamily: 'var(--mono)',
+              fontSize: 8,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--muted)',
+              cursor: 'pointer',
+            }}
+          >
+            Settings
+          </button>
+          </div>
+        </div>
       </div>
 
       {/* Focus strip */}
@@ -261,6 +329,12 @@ function MainLayout() {
 
       {/* Diagnostic log panel */}
       <DiagnosticLog open={logOpen} onClose={() => setLogOpen(false)} />
+
+      {/* Settings panel */}
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+
+      {/* Session browser */}
+      {sessionBrowserOpen && <SessionBrowserModal onClose={() => setSessionBrowserOpen(false)} />}
     </div>
   )
 }

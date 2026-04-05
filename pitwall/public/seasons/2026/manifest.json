@@ -1,0 +1,12 @@
+{
+  "season": 2026,
+  "version": 1,
+  "description": "Shipped season asset bundle for 2026",
+  "assets": {
+    "cars": "cars/shapes",
+    "tracks": "tracks/layouts",
+    "drivers": "drivers/headshots",
+    "teamLogos": "teams/logos",
+    "teamColors": "teams/colors.json"
+  }
+}
