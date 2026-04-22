@@ -121,6 +121,4 @@ Pitwall does not proxy live OpenF1 traffic. Users provide their own API key and 
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
-
 OpenF1 data is used under OpenF1 terms. F1, FORMULA ONE, FORMULA 1, FIA FORMULA ONE WORLD CHAMPIONSHIP, GRAND PRIX and related marks are trade marks of Formula One Licensing B.V.
