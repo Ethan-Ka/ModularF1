@@ -26,6 +26,9 @@ Pitwall is built for fans who want team-style race context in one place: timing,
 
 The goal is to make race intelligence configurable, shareable, and useful in real time.
 
+
+Works great with [F1 Sensor](https://github.com/Nicxe/f1_sensor)
+
 ---
 
 ## Features
