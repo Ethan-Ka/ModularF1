@@ -28,7 +28,8 @@ Up to 6 requests per second and 60 requests per minute
 - - [ ] Plugins for custom widgets and or functionality
 - [ ] Weather
 - [ ] Special focus on audio/comms
-- [ ] Championship and driver/team standings
+- [x] Championship and driver/team standings
+  - [ ] Driver backgrounds and individual profiles, etc.
 - [ ] Car and track custom svgs for map widget and car widget
 - [ ] F1TV/Stream overlay with driver/different camera detection
 - [ ] switch between live and historical mode

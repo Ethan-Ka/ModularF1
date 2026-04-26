@@ -182,7 +182,7 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
           cliffText={cliffText}
           accentColor={compoundColor}
         />
-        <StatBox label="Tyre age" value={`${tyreAge} laps`} />
+        <StatBox label="Stint" value={`#${currentStint.stint_number}`} />
         <StatBox label="Tyre life" value={`${tyreAge}/${cliffTyreLife} laps`} />
         <StatBox label="Track temp" value={`${trackTemp.toFixed(0)}°C`} />
       </div>

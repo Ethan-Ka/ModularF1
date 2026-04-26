@@ -13,6 +13,7 @@ import { Canvas } from './components/Canvas/Canvas'
 import { DiagnosticLog } from './components/DiagnosticLog/DiagnosticLog'
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel'
 import { SessionBrowserModal } from './components/SessionBrowser/SessionBrowserModal'
+import { SeasonStandingsModal } from './components/SeasonStandings/SeasonStandingsModal'
 import { ToastQueue } from './components/AmbientBar/ToastQueue'
 import { TopChromeSharedGradientLayer } from './components/AmbientBar/TopChromeSharedGradientLayer'
 import { TopChromeWaveLayer } from './components/AmbientBar/TopChromeWaveLayer'
@@ -769,6 +770,7 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
   const [logOpen, setLogOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sessionBrowserOpen, setSessionBrowserOpen] = useState(false)
+  const [standingsOpen, setStandingsOpen] = useState(false)
   const logEntries = useLogStore((s) => s.entries)
   const hasErrors = logEntries.some((e) => e.level === 'ERR')
 
@@ -958,16 +960,39 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
           <div
             style={{
               display: 'flex',
-              justifyContent: 'center',
               alignItems: 'center',
-              cursor: 'pointer',
+              gap: 6,
               // @ts-ignore
               WebkitAppRegion: 'no-drag',
             }}
-            onClick={() => setSessionBrowserOpen(true)}
-            className="interactive-chip"
           >
-            <SessionSelector />
+            <div
+              style={{ cursor: 'pointer' }}
+              onClick={() => setSessionBrowserOpen(true)}
+              className="interactive-chip"
+            >
+              <SessionSelector />
+            </div>
+            <button
+              onClick={() => setStandingsOpen(true)}
+              className="interactive-button"
+              title="2026 Championship Standings"
+              style={{
+                background: 'none',
+                border: '0.5px solid var(--border)',
+                borderRadius: 3,
+                padding: '4px 10px',
+                fontFamily: 'var(--mono)',
+                fontSize: 8,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Standings
+            </button>
           </div>
 
           <div
@@ -1065,6 +1090,9 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
 
       {/* Session browser */}
       {sessionBrowserOpen && <SessionBrowserModal onClose={() => setSessionBrowserOpen(false)} />}
+
+      {/* Season standings */}
+      {standingsOpen && <SeasonStandingsModal onClose={() => setStandingsOpen(false)} />}
 
       {/* Global toast queue for system/dev toasts. Kept outside AmbientRaceLayer on purpose. */}
       <div
