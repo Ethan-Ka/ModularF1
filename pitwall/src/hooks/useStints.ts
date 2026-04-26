@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchStints } from '../api/openf1'
 import { useSessionStore } from '../store/sessionStore'
 import { queryModePolicy } from './queryModePolicy'
+import { readSessionData, writeSessionData, isSessionDataComplete } from '../lib/f1PersistentStore'
+import type { OpenF1Stint } from '../api/openf1'
 
 export function useStints(driverNumber?: number, options?: { preload?: boolean }) {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
@@ -11,7 +13,17 @@ export function useStints(driverNumber?: number, options?: { preload?: boolean }
 
   return useQuery({
     queryKey: ['stints', sessionKey, driverNumber],
-    queryFn: () => fetchStints(sessionKey!, driverNumber, apiKey),
+    queryFn: async () => {
+      const key = sessionKey!
+      const complete = await isSessionDataComplete('stints', key, driverNumber)
+      if (complete) {
+        const stored = await readSessionData<OpenF1Stint>('stints', key, driverNumber)
+        if (stored.length > 0) return stored
+      }
+      const data = await fetchStints(key, driverNumber, apiKey)
+      void writeSessionData('stints', key, data, mode === 'historical', driverNumber)
+      return data
+    },
     enabled: !!sessionKey,
     ...queryModePolicy(mode, {
       staleTime: 10_000,

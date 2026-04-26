@@ -60,3 +60,36 @@ export async function fetchJolpicaRaceResults(year: number): Promise<JolpicaRace
   const data = await res.json()
   return data?.MRData?.RaceTable?.Races ?? []
 }
+
+export interface JolpicaCareerSeason {
+  season: string
+  round: string
+  position: string
+  points: string
+  wins: string
+  constructors: Array<{ constructorId: string; name: string }>
+}
+
+export async function fetchJolpicaDriverCareer(driverId: string): Promise<JolpicaCareerSeason[]> {
+  const res = await fetch(`${BASE}/drivers/${driverId}/driverStandings.json`)
+  if (!res.ok) throw jolpicaError('career', res.status)
+  const data = await res.json()
+  const lists: Array<{
+    season: string
+    round: string
+    DriverStandings: Array<{
+      position: string
+      points: string
+      wins: string
+      Constructors: Array<{ constructorId: string; name: string }>
+    }>
+  }> = data?.MRData?.StandingsTable?.StandingsLists ?? []
+  return lists.map((l) => ({
+    season: l.season,
+    round: l.round,
+    position: l.DriverStandings[0]?.position ?? '0',
+    points: l.DriverStandings[0]?.points ?? '0',
+    wins: l.DriverStandings[0]?.wins ?? '0',
+    constructors: l.DriverStandings[0]?.Constructors ?? [],
+  }))
+}

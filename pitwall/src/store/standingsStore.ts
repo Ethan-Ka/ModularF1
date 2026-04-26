@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 
 export interface DriverSeasonStanding {
   driverNumber: number
+  driverId?: string
   points: number
   wins: number
   podiums: number
@@ -41,7 +42,7 @@ export const useStandingsStore = create<StandingsStore>()(
     }),
     {
       name: 'pitwall-standings',
-      version: 2,
+      version: 3,
       migrate: () => ({ year: null, standings: null, raceCount: 0, computedAt: null }),
     }
   )

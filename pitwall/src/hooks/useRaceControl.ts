@@ -5,6 +5,8 @@ import { useAmbientStore } from '../store/ambientStore'
 import { useEffect, useRef } from 'react'
 import type { FlagState } from '../store/ambientStore'
 import { queryModePolicy } from './queryModePolicy'
+import { readSessionData, writeSessionData, isSessionDataComplete } from '../lib/f1PersistentStore'
+import type { OpenF1RaceControl } from '../api/openf1'
 
 function mapFlagToState(flag: string | null, message: string): FlagState | null {
   const msg = message.toUpperCase()
@@ -40,7 +42,17 @@ export function useRaceControl() {
 
   const query = useQuery({
     queryKey: ['race_control', sessionKey],
-    queryFn: () => fetchRaceControl(sessionKey!, apiKey),
+    queryFn: async () => {
+      const key = sessionKey!
+      const complete = await isSessionDataComplete('race_control', key)
+      if (complete) {
+        const stored = await readSessionData<OpenF1RaceControl>('race_control', key)
+        if (stored.length > 0) return stored
+      }
+      const data = await fetchRaceControl(key, apiKey)
+      void writeSessionData('race_control', key, data, mode === 'historical')
+      return data
+    },
     enabled: !!sessionKey,
     ...queryModePolicy(mode, {
       staleTime: 10_000,

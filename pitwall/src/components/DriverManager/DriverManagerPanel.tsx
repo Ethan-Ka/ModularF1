@@ -5,6 +5,7 @@ import { useSessionStore } from '../../store/sessionStore'
 import { usePositions } from '../../hooks/usePositions'
 import { loadSeasonCatalog, type SeasonCatalogEntry } from '../../lib/seasonData'
 import { DriverCard } from './DriverCard'
+import { DriverProfileModal } from '../DriverProfile/DriverProfileModal'
 
 interface DriverManagerPanelProps {
   onClose: () => void
@@ -42,6 +43,7 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
   const [catalogSeasons, setCatalogSeasons] = useState<SeasonCatalogEntry[]>([])
   const [selectedSeasonYear, setSelectedSeasonYear] = useState<number>(2026)
   const [isClosing, setIsClosing] = useState(false)
+  const [profileDriverNumber, setProfileDriverNumber] = useState<number | null>(null)
   const [exitingStarred, setExitingStarred] = useState<number[]>([])
   const [enteringStarred, setEnteringStarred] = useState<number[]>([])
   const [displayOrder, setDisplayOrder] = useState<number[]>(starred)
@@ -303,7 +305,8 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
   }
 
   return (
-    // Backdrop
+    <>
+    {/* Backdrop */}
     <div
       onClick={handleRequestClose}
       className={isClosing ? 'glass-overlay glass-overlay-exit' : 'glass-overlay'}
@@ -574,6 +577,7 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
                         onSetFocus={() => setCanvasFocus(
                           canvasFocus === driver.driver_number ? null : driver.driver_number
                         )}
+                        onViewProfile={() => setProfileDriverNumber(driver.driver_number)}
                         isCanvasFocus={canvasFocus === driver.driver_number}
                         animateIn={entering}
                         animateOut={exiting}
@@ -735,6 +739,7 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
                         onSetFocus={() => setCanvasFocus(
                           canvasFocus === driver.driver_number ? null : driver.driver_number
                         )}
+                        onViewProfile={() => setProfileDriverNumber(driver.driver_number)}
                         isCanvasFocus={canvasFocus === driver.driver_number}
                       />
                     ))}
@@ -758,6 +763,14 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
         </div>
       </div>
     </div>
+
+    {profileDriverNumber !== null && (
+      <DriverProfileModal
+        driverNumber={profileDriverNumber}
+        onClose={() => setProfileDriverNumber(null)}
+      />
+    )}
+  </>
   )
 }
 

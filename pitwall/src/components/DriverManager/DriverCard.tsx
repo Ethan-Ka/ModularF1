@@ -8,6 +8,7 @@ interface DriverCardProps {
   isStarred: boolean
   onToggleStar: () => void
   onSetFocus: () => void
+  onViewProfile?: () => void
   isCanvasFocus: boolean
   animateIn?: boolean
   animateOut?: boolean
@@ -109,6 +110,7 @@ export function DriverCard({
   isStarred,
   onToggleStar,
   onSetFocus,
+  onViewProfile,
   isCanvasFocus,
   animateIn = false,
   animateOut = false,
@@ -147,7 +149,7 @@ export function DriverCard({
   const countryBadgeSizePx = 14
   return (
     <div
-      onClick={onSetFocus}
+      onClick={onViewProfile ?? onSetFocus}
       className={[
         'interactive-card',
         animateIn ? 'animated-star-add' : '',

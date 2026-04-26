@@ -2,9 +2,78 @@ const { app, BrowserWindow, shell, ipcMain, Menu, dialog } = require('electron')
 const nodeFs = require('fs')
 const fs = require('fs/promises')
 const path = require('path')
+const { spawn } = require('child_process')
+const f1store = require('./f1store.cjs')
 
 const isDev = process.env.VITE_DEV_SERVER_URL != null
 const mainWindows = new Set()
+
+// ---------------------------------------------------------------------------
+// FastF1 Python sidecar
+// ---------------------------------------------------------------------------
+
+let fastf1Process = null
+
+// Ordered list of Python executables to try. On Windows 'py' is the Python Launcher.
+const PYTHON_CANDIDATES = process.platform === 'win32'
+  ? ['python', 'python3', 'py']
+  : ['python3', 'python']
+
+function trySpawnFastF1(scriptPath, candidates) {
+  if (candidates.length === 0) {
+    console.warn('[FastF1] No Python executable found. Install Python 3.9+ and run: npm run fastf1:install')
+    return
+  }
+
+  const [cmd, ...rest] = candidates
+  const proc = spawn(cmd, [scriptPath], { stdio: ['ignore', 'pipe', 'pipe'] })
+
+  proc.stdout.on('data', (d) => process.stdout.write(`[FastF1] ${d}`))
+
+  let stderrBuf = ''
+  proc.stderr.on('data', (d) => {
+    const s = d.toString()
+    stderrBuf += s
+    process.stderr.write(`[FastF1] ${s}`)
+  })
+
+  proc.on('error', () => {
+    // This Python command isn't on PATH — try the next one
+    trySpawnFastF1(scriptPath, rest)
+  })
+
+  proc.on('exit', (code) => {
+    if (code !== 0 && stderrBuf.includes('ModuleNotFoundError')) {
+      console.warn('[FastF1] Missing Python dependencies. Run: npm run fastf1:install')
+    }
+    if (!isAppQuitting && code !== 0) {
+      console.warn(`[FastF1] Sidecar exited with code ${code}`)
+    }
+    fastf1Process = null
+  })
+
+  fastf1Process = proc
+}
+
+function startFastF1Server() {
+  const scriptPath = isDev
+    ? path.join(__dirname, '../bridge/fastf1_server/main.py')
+    : path.join(process.resourcesPath, 'fastf1_server/main.py')
+
+  if (!nodeFs.existsSync(scriptPath)) {
+    console.warn('[FastF1] main.py not found at', scriptPath, '— sidecar not started')
+    return
+  }
+
+  trySpawnFastF1(scriptPath, PYTHON_CANDIDATES)
+}
+
+function stopFastF1Server() {
+  if (fastf1Process && !fastf1Process.killed) {
+    fastf1Process.kill()
+    fastf1Process = null
+  }
+}
 let devControlWindow = null
 let reusablePopoutWindow = null
 let isAppQuitting = false
@@ -646,6 +715,7 @@ app.whenReady().then(() => {
 
   app.on('before-quit', () => {
     isAppQuitting = true
+    stopFastF1Server()
   })
 
   // IPC handler: open a new window offset from the requesting window
@@ -765,6 +835,38 @@ app.whenReady().then(() => {
     if (!data || typeof data.action !== 'string') return
     broadcastDebugAction(data.action, data.payload)
   })
+
+  f1store.init()
+  startFastF1Server()
+
+  // ---------------------------------------------------------------------------
+  // F1 persistent store IPC
+  // ---------------------------------------------------------------------------
+
+  ipcMain.handle('f1store-read', (_event, args) => {
+    const { table, sessionKey, driverNumber } = args ?? {}
+    return f1store.readCollection(table, sessionKey, driverNumber)
+  })
+
+  ipcMain.handle('f1store-write', (_event, args) => {
+    const { table, sessionKey, rows, isComplete, driverNumber } = args ?? {}
+    f1store.writeCollection(table, sessionKey, rows, isComplete, driverNumber)
+  })
+
+  ipcMain.handle('f1store-is-complete', (_event, args) => {
+    const { table, sessionKey, driverNumber } = args ?? {}
+    return f1store.isCollectionComplete(table, sessionKey, driverNumber)
+  })
+
+  ipcMain.handle('open-external', (_event, url) => {
+    if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://'))) {
+      shell.openExternal(url)
+    }
+  })
+
+  ipcMain.handle('fastf1-server-status', () => ({
+    running: fastf1Process != null && !fastf1Process.killed,
+  }))
 
   createWindow()
   ensureReusablePopoutWindow()

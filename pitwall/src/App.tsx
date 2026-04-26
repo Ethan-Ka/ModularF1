@@ -333,7 +333,40 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
 
   const latestSessionQuery = useLatestSession()
   const latestSession = latestSessionQuery.data
-  const { activeSession, setActiveSession, mode, apiRequestsEnabled } = useSessionStore()
+  const { activeSession, setActiveSession, mode, setMode, apiKey, apiRequestsEnabled } = useSessionStore()
+
+  // --- Automatic mode detection and fallback ---
+  useEffect(() => {
+    // If no API key, fallback to onboarding/historical
+    if (!apiKey) {
+      if (mode !== 'onboarding') setMode('onboarding')
+      return
+    }
+
+    // If in onboarding but key is present, go to live
+    if (mode === 'onboarding' && apiKey) {
+      setMode('live')
+      return
+    }
+
+    // If in live mode, check if a race is about to start
+    if (mode === 'live' && latestSession?.[0]) {
+      const session = latestSession[0]
+      const now = new Date()
+      const start = new Date(session.date_start)
+      const end = new Date(session.date_end)
+      // If race is not yet started but within 2 hours, stay in live mode and show upcoming
+      if (now < start && (start.getTime() - now.getTime()) < 2 * 60 * 60 * 1000) {
+        // Stay in live mode, UI will show upcoming
+        return
+      }
+      // If race is over, fallback to historical
+      if (now > end) {
+        setMode('historical')
+        return
+      }
+    }
+  }, [apiKey, mode, setMode, latestSession])
   const { setLeader, flagState, setFlagState } = useAmbientStore()
   const { drivers, seasonYear, getTeamColor, importSeasonFromPublic } = useDriverStore()
   const positions = positionsQuery.data
@@ -383,10 +416,21 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
   useEffect(() => {
     const sessionName = activeSession?.session_name ?? ''
     const isRaceSession = /race/i.test(sessionName)
-    if (mode === 'live' && isRaceSession && flagState === 'NONE') {
-      setFlagState('GREEN', 'Green flag')
+    if (mode === 'live' && isRaceSession) {
+      const now = new Date()
+      const start = activeSession?.date_start ? new Date(activeSession.date_start) : null
+      const end = activeSession?.date_end ? new Date(activeSession.date_end) : null
+      if (start && end) {
+        if (now >= start && now <= end && flagState === 'NONE') {
+          setFlagState('GREEN', 'Green flag')
+        } else if (now < start && flagState !== 'CALM') {
+          setFlagState('CALM', 'Race upcoming')
+        } else if (now > end && flagState !== 'NONE') {
+          setFlagState('NONE', 'Race ended')
+        }
+      }
     }
-  }, [mode, activeSession?.session_name, flagState, setFlagState])
+  }, [mode, activeSession?.session_name, activeSession?.date_start, activeSession?.date_end, flagState, setFlagState])
 
   useEffect(() => {
     if (!onStartupProgressChange) return

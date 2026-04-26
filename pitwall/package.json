@@ -12,9 +12,13 @@
     "lint": "eslint . --max-warnings 0",
     "assets:logo": "node scripts/generate-logo-assets.mjs",
     "assets:sync:f1": "node scripts/sync-f1-driver-assets.mjs",
+    "data:extract": "node scripts/extract-f1db.mjs",
     "electron:dev": "concurrently -k \"cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\" \"vite\"",
     "electron:build": "vite build && electron-builder",
-    "electron:preview": "vite build && cross-env NODE_ENV=production electron ."
+    "electron:preview": "vite build && cross-env NODE_ENV=production electron .",
+    "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
+    "fastf1:install": "pip install -r bridge/fastf1_server/requirements.txt",
+    "fastf1:start": "python bridge/fastf1_server/main.py"
   },
   "build": {
     "appId": "com.pitwall.app",
@@ -43,6 +47,7 @@
     "@tanstack/react-query": "^5.96.2",
     "@types/d3": "^7.4.3",
     "@types/react-grid-layout": "^1.3.6",
+    "better-sqlite3": "^12.9.0",
     "d3": "^7.9.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -62,6 +67,7 @@
     "cross-env": "^10.1.0",
     "electron": "^41.1.1",
     "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

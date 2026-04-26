@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSeasonStandings, type DriverSeasonStanding } from '../../hooks/useSeasonStandings'
 import { useDriverStore } from '../../store/driverStore'
+import { DriverProfileModal } from '../DriverProfile/DriverProfileModal'
 
 interface SeasonStandingsModalProps {
   onClose: () => void
@@ -83,9 +84,10 @@ interface DriverRowProps {
   leaderPoints: number
   isHero: boolean
   staggerIndex: number
+  onViewProfile: () => void
 }
 
-function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerIndex }: DriverRowProps) {
+function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerIndex, onViewProfile }: DriverRowProps) {
   const { getDriver, getTeamColor } = useDriverStore()
   const driver = getDriver(standing.driverNumber)
   const teamColor = getTeamColor(standing.driverNumber)
@@ -98,7 +100,8 @@ function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerInd
 
   return (
     <div
-      className="stagger-item"
+      onClick={onViewProfile}
+      className="stagger-item interactive-card"
       style={
         {
           '--stagger-delay': `${Math.min(staggerIndex * 22, 300)}ms`,
@@ -109,6 +112,8 @@ function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerInd
             ? `linear-gradient(90deg, ${teamColor}18 0%, transparent 60%)`
             : 'transparent',
           transition: 'background 0.15s',
+          cursor: 'pointer',
+          borderRadius: 0,
         } as React.CSSProperties
       }
     >
@@ -499,6 +504,7 @@ function ConstructorRow({
 export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
   const EXIT_MS = 220
   const [isClosing, setIsClosing] = useState(false)
+  const [profileDriverNumber, setProfileDriverNumber] = useState<number | null>(null)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { standings, isLoading, isRefreshing, raceCount, loadedCount, totalFetchSteps } = useSeasonStandings(2026)
@@ -574,7 +580,7 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
 
   const loadProgress = Math.round((loadedCount / totalFetchSteps) * 100)
 
-  return createPortal(
+  const modal = createPortal(
     <div
       onClick={handleRequestClose}
       className={isClosing ? 'glass-overlay glass-overlay-exit' : 'glass-overlay'}
@@ -831,6 +837,7 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
                     leaderPoints={maxDriverPoints}
                     isHero={i === 0}
                     staggerIndex={i}
+                    onViewProfile={() => setProfileDriverNumber(standing.driverNumber)}
                   />
                 ))}
               </div>
@@ -894,5 +901,17 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
       </div>
     </div>,
     document.body
+  )
+
+  return (
+    <>
+      {modal}
+      {profileDriverNumber !== null && (
+        <DriverProfileModal
+          driverNumber={profileDriverNumber}
+          onClose={() => setProfileDriverNumber(null)}
+        />
+      )}
+    </>
   )
 }

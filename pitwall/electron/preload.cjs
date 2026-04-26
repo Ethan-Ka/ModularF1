@@ -2,6 +2,14 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
+  f1store: {
+    read: (table, sessionKey, driverNumber) =>
+      ipcRenderer.invoke('f1store-read', { table, sessionKey, driverNumber }),
+    write: (table, sessionKey, rows, isComplete, driverNumber) =>
+      ipcRenderer.invoke('f1store-write', { table, sessionKey, rows, isComplete, driverNumber }),
+    isComplete: (table, sessionKey, driverNumber) =>
+      ipcRenderer.invoke('f1store-is-complete', { table, sessionKey, driverNumber }),
+  },
   openNewWindow: (options) => ipcRenderer.invoke('open-new-window', options),
   dockWidgetToMainWorkspace: (payload) => ipcRenderer.invoke('dock-widget-to-main', payload),
   closeCurrentWindow: () => ipcRenderer.invoke('close-current-window'),
@@ -9,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   consumeWindowBootstrapWidget: () => ipcRenderer.invoke('consume-window-bootstrap-widget'),
   savePitwallFile: (options) => ipcRenderer.invoke('save-pitwall-file', options),
   openPitwallFile: () => ipcRenderer.invoke('open-pitwall-file'),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
   onDebugAction: (cb) => {
     const handler = (_event, data) => cb(data)
     ipcRenderer.on('debug-action', handler)

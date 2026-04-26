@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  checkFastF1Server,
+  getFastF1AuthStatus,
+  signOutFastF1,
+  startFastF1Auth,
+} from '../../api/fastf1Bridge'
 import { useSessionStore } from '../../store/sessionStore'
 import { useAmbientStore } from '../../store/ambientStore'
 import { useWorkspaceStore } from '../../store/workspaceStore'
@@ -227,7 +233,12 @@ function ToggleSelector({
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const EXIT_MS = 220
   const API_REVEAL_EXIT_MS = 180
-  const { mode, apiKey, clearApiKey, setMode, apiRequestsEnabled, setApiRequestsEnabled } = useSessionStore()
+  const {
+    mode, apiKey, clearApiKey, setMode, apiRequestsEnabled, setApiRequestsEnabled,
+    dataSource, setDataSource,
+    fastf1ServerAvailable, setFastF1ServerAvailable,
+    f1tvAuthenticated, f1tvEmail, setF1TVAuth,
+  } = useSessionStore()
   const {
     leaderColorMode,
     flagState,
@@ -245,6 +256,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const logEntries = useLogStore((s) => s.entries)
   const clearLogs = useLogStore((s) => s.clear)
 
+  const [f1tvAuthPending, setF1tvAuthPending] = useState(false)
+  const [f1tvAuthLoginUrl, setF1tvAuthLoginUrl] = useState<string | null>(null)
+  const f1tvPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const [apiKeyInputOpen, setApiKeyInputOpen] = useState(false)
   const [apiKeyDraft, setApiKeyDraft] = useState('')
   const [exportBaseName, setExportBaseName] = useState('pitwall')
@@ -259,6 +274,62 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const hasApiKey = Boolean(apiKey)
 
   const { setApiKey } = useSessionStore()
+
+  // Re-probe bridge + auth when settings panel mounts
+  useEffect(() => {
+    let cancelled = false
+    async function probe() {
+      const ok = await checkFastF1Server()
+      if (cancelled) return
+      setFastF1ServerAvailable(ok)
+      if (ok) {
+        try {
+          const s = await getFastF1AuthStatus()
+          if (!cancelled) setF1TVAuth(s.authenticated, s.email)
+        } catch { /* ignore */ }
+      }
+    }
+    probe()
+    return () => { cancelled = true }
+  }, [setFastF1ServerAvailable, setF1TVAuth])
+
+  // Poll for F1TV auth completion
+  useEffect(() => {
+    if (!f1tvAuthPending) return
+    f1tvPollRef.current = setInterval(async () => {
+      try {
+        const s = await getFastF1AuthStatus()
+        if (s.authenticated) {
+          setF1TVAuth(true, s.email)
+          setF1tvAuthPending(false)
+        }
+      } catch { /* keep polling */ }
+    }, 3_000)
+    return () => { if (f1tvPollRef.current) clearInterval(f1tvPollRef.current) }
+  }, [f1tvAuthPending, setF1TVAuth])
+
+  async function handleF1TVSignIn() {
+    try {
+      const res = await startFastF1Auth()
+      if (res.status === 'already_authenticated') {
+        const s = await getFastF1AuthStatus()
+        setF1TVAuth(s.authenticated, s.email)
+        return
+      }
+      if (res.login_url) {
+        setF1tvAuthLoginUrl(res.login_url)
+        window.electronAPI?.openExternal(res.login_url)
+        setF1tvAuthPending(true)
+      }
+    } catch { /* bridge not running */ }
+  }
+
+  async function handleF1TVSignOut() {
+    await signOutFastF1().catch(() => {})
+    setF1TVAuth(false, null)
+    setF1tvAuthPending(false)
+    setF1tvAuthLoginUrl(null)
+  }
 
   function handleRequestClose() {
     if (isClosing) return
@@ -873,6 +944,103 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   ? 'Polling active. Live and historical fetch hooks can request new data.'
                   : 'Polling paused. Existing cached data remains visible until re-enabled.'}
               </span>
+            </div>
+          </Section>
+
+          {/* FastF1 */}
+          <Section>
+            <SectionLabel>FastF1</SectionLabel>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+              {/* Data source selector */}
+              <div>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--white)', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                  Active data source
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                  {(['openf1', 'fastf1'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setDataSource(s)}
+                      style={{
+                        background: dataSource === s ? 'var(--bg4)' : 'transparent',
+                        border: `0.5px solid ${dataSource === s ? 'var(--red)' : 'var(--border)'}`,
+                        borderRadius: 3,
+                        padding: '7px 0',
+                        fontFamily: 'var(--mono)',
+                        fontSize: 9,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: dataSource === s ? 'var(--white)' : 'var(--muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {s === 'openf1' ? 'OpenF1' : 'FastF1'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bridge status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                  background: fastf1ServerAvailable ? '#00c864' : 'var(--muted2)',
+                }} />
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '0.06em', color: 'var(--muted)' }}>
+                  {fastf1ServerAvailable ? 'Python bridge running' : 'Python bridge not running'}
+                </span>
+              </div>
+
+              {/* F1TV auth */}
+              <div>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--white)', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                  F1TV authentication
+                </span>
+
+                {f1tvAuthenticated ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--green)', letterSpacing: '0.06em' }}>
+                      ✓ {f1tvEmail ? f1tvEmail : 'Authenticated'}
+                    </span>
+                    <button
+                      onClick={handleF1TVSignOut}
+                      style={{ background: 'none', border: 'none', fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, letterSpacing: '0.06em', padding: 0 }}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                ) : f1tvAuthPending ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--muted)', letterSpacing: '0.06em' }}>
+                      Waiting for browser sign-in…
+                    </span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {f1tvAuthLoginUrl && (
+                        <button
+                          onClick={() => window.electronAPI?.openExternal(f1tvAuthLoginUrl)}
+                          style={{ background: 'none', border: 'none', fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--white)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, letterSpacing: '0.06em', padding: 0 }}
+                        >
+                          Reopen
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setF1tvAuthPending(false)}
+                        style={{ background: 'none', border: 'none', fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--muted)', cursor: 'pointer', letterSpacing: '0.06em', padding: 0 }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <ActionButton onClick={handleF1TVSignIn} disabled={!fastf1ServerAvailable}>
+                    Sign in with F1TV
+                  </ActionButton>
+                )}
+              </div>
+
             </div>
           </Section>
 

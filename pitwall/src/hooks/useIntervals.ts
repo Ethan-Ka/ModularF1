@@ -4,7 +4,7 @@ import { fetchIntervals } from '../api/openf1'
 import { useSessionStore } from '../store/sessionStore'
 import type { OpenF1Interval } from '../api/openf1'
 import { queryModePolicy } from './queryModePolicy'
-import { readIntervalHistory, upsertIntervalHistory } from '../lib/intervalCache'
+import { readSessionData, writeSessionData, isSessionDataComplete } from '../lib/f1PersistentStore'
 
 export function useIntervalHistory(options?: { preload?: boolean }) {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
@@ -16,23 +16,26 @@ export function useIntervalHistory(options?: { preload?: boolean }) {
     queryKey: ['intervals-history', sessionKey],
     queryFn: async () => {
       const key = sessionKey!
-      const cached = await readIntervalHistory(key)
 
-      // Historical sessions are immutable. If we already have coverage, skip API usage.
-      if (mode === 'historical' && cached && cached.length > 0) {
-        return cached
+      // For historical sessions, stored data is immutable — skip the network entirely
+      const complete = await isSessionDataComplete('intervals', key)
+      if (complete) {
+        const stored = await readSessionData<OpenF1Interval>('intervals', key)
+        if (stored.length > 0) return stored
       }
+
+      // For live sessions, read what we have as a fallback in case the API fails
+      const stored = complete ? [] : await readSessionData<OpenF1Interval>('intervals', key)
 
       try {
         const all = await fetchIntervals(key, apiKey)
 
-        if (all.length === 0 && cached) return cached
+        if (all.length === 0 && stored.length > 0) return stored
 
-        return upsertIntervalHistory(key, all)
+        void writeSessionData('intervals', key, all, mode === 'historical')
+        return all
       } catch (error) {
-        if (cached && cached.length > 0) {
-          return cached
-        }
+        if (stored.length > 0) return stored
         throw error
       }
     },

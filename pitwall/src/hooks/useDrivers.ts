@@ -4,6 +4,8 @@ import { useSessionStore } from '../store/sessionStore'
 import { useDriverStore } from '../store/driverStore'
 import { useEffect } from 'react'
 import { queryModePolicy } from './queryModePolicy'
+import { readSessionData, writeSessionData, isSessionDataComplete } from '../lib/f1PersistentStore'
+import type { OpenF1Driver } from '../api/openf1'
 
 export function useDrivers() {
   const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
@@ -15,7 +17,17 @@ export function useDrivers() {
 
   const query = useQuery({
     queryKey: ['drivers', sessionKey],
-    queryFn: () => fetchDrivers(sessionKey!, apiKey),
+    queryFn: async () => {
+      const key = sessionKey!
+      const complete = await isSessionDataComplete('drivers', key)
+      if (complete) {
+        const stored = await readSessionData<OpenF1Driver>('drivers', key)
+        if (stored.length > 0) return stored
+      }
+      const data = await fetchDrivers(key, apiKey)
+      void writeSessionData('drivers', key, data, mode === 'historical')
+      return data
+    },
     enabled: !!sessionKey,
     ...queryModePolicy(mode, {
       staleTime: Infinity,
