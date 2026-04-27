@@ -20,6 +20,7 @@ import { TopChromeWaveLayer } from './components/AmbientBar/TopChromeWaveLayer'
 import { FLAG_COLORS } from './components/AmbientBar/flagStateMachine'
 import { useDrivers } from './hooks/useDrivers'
 import { useLatestSession } from './hooks/useSession'
+import { useNextRace } from './hooks/useNextRace'
 import { useRaceControl } from './hooks/useRaceControl'
 import { usePositions } from './hooks/usePositions'
 import { useIntervals } from './hooks/useIntervals'
@@ -333,45 +334,41 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
 
   const latestSessionQuery = useLatestSession()
   const latestSession = latestSessionQuery.data
-  const { activeSession, setActiveSession, mode, setMode, apiKey, apiRequestsEnabled } = useSessionStore()
+  const { activeSession, setActiveSession, mode, setMode, apiKey, apiRequestsEnabled, dataSource } = useSessionStore()
 
-  // --- Automatic mode detection and fallback ---
+  // Race proximity for pre-race ambient state — uses the same year as the active session
+  const nextRaceYear = activeSession?.year ?? new Date().getFullYear()
+  const { proximity: raceProximity, session: nextRaceSession } = useNextRace(nextRaceYear)
+
+  // --- Credential gating: only OpenF1 users without a key should see onboarding ---
   useEffect(() => {
-    // If no API key, fallback to onboarding/historical
-    if (!apiKey) {
+    if (dataSource === 'openf1' && !apiKey) {
       if (mode !== 'onboarding') setMode('onboarding')
       return
     }
-
-    // If in onboarding but key is present, go to live
-    if (mode === 'onboarding' && apiKey) {
-      setMode('live')
+    // OpenF1 key arrived (e.g. restored from storage) while in onboarding — go to historical
+    if (dataSource === 'openf1' && mode === 'onboarding' && apiKey) {
+      setMode('historical')
       return
     }
-
-    // If in live mode, check if a race is about to start
-    if (mode === 'live' && latestSession?.[0]) {
-      const session = latestSession[0]
-      const now = new Date()
-      const start = new Date(session.date_start)
-      const end = new Date(session.date_end)
-      // If race is not yet started but within 2 hours, stay in live mode and show upcoming
-      if (now < start && (start.getTime() - now.getTime()) < 2 * 60 * 60 * 1000) {
-        // Stay in live mode, UI will show upcoming
-        return
-      }
-      // If race is over, fallback to historical
-      if (now > end) {
-        setMode('historical')
-        return
-      }
+    // FastF1: onboarding only clears when data source is switched; no key required
+    if (dataSource === 'fastf1' && mode === 'onboarding') {
+      setMode('historical')
+      return
     }
-  }, [apiKey, mode, setMode, latestSession])
+  }, [apiKey, dataSource, mode, setMode])
   const { setLeader, flagState, setFlagState } = useAmbientStore()
   const { drivers, seasonYear, getTeamColor, importSeasonFromPublic } = useDriverStore()
   const positions = positionsQuery.data
   const [seasonBootstrapDone, setSeasonBootstrapDone] = useState(false)
   const seasonBootstrapAttemptRef = useRef<number | null>(null)
+
+  // Clear ambient state when entering historical mode — the bar should be dark
+  useEffect(() => {
+    if (mode === 'historical' && flagState !== 'NONE') {
+      setFlagState('NONE')
+    }
+  }, [mode, flagState, setFlagState])
 
   // Auto-select latest session if none active
   useEffect(() => {
@@ -412,25 +409,45 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
     }
   }, [positions, getTeamColor, setLeader])
 
-  // Live race sessions should never idle in NONE ambient state.
+  // Drive ambient bar state from race proximity when in live mode and no active race is running.
+  // useRaceControl() handles flag states during an active race — this only covers the gap periods.
   useEffect(() => {
+    if (mode !== 'live') return
+
     const sessionName = activeSession?.session_name ?? ''
-    const isRaceSession = /race/i.test(sessionName)
-    if (mode === 'live' && isRaceSession) {
+    const isActiveRaceSession = /race/i.test(sessionName) && (() => {
       const now = new Date()
       const start = activeSession?.date_start ? new Date(activeSession.date_start) : null
       const end = activeSession?.date_end ? new Date(activeSession.date_end) : null
-      if (start && end) {
-        if (now >= start && now <= end && flagState === 'NONE') {
-          setFlagState('GREEN', 'Green flag')
-        } else if (now < start && flagState !== 'CALM') {
-          setFlagState('CALM', 'Race upcoming')
-        } else if (now > end && flagState !== 'NONE') {
-          setFlagState('NONE', 'Race ended')
-        }
+      return start && end && now >= start && now <= end
+    })()
+
+    // If a race is actively running, keep current flag state (raceControl drives it)
+    if (isActiveRaceSession) return
+
+    // Between sessions — drive by how close the next race is
+    if (raceProximity === 'live') {
+      // Race is running per schedule but not yet in raceControl — seed GREEN
+      if (flagState === 'NONE' || flagState === 'CALM') {
+        setFlagState('GREEN', 'Green flag')
+      }
+    } else if (raceProximity === 'imminent' || raceProximity === 'today') {
+      if (flagState !== 'WAITING_FOR_START') {
+        setFlagState('WAITING_FOR_START', nextRaceSession?.session_name ? `${nextRaceSession.session_name} starting soon` : 'Race starting soon')
+      }
+    } else if (raceProximity === 'weekend') {
+      if (flagState !== 'CALM') {
+        const circuit = nextRaceSession?.circuit_short_name ?? nextRaceSession?.country_name ?? ''
+        setFlagState('CALM', circuit ? `Race weekend · ${circuit}` : 'Race weekend')
+      }
+    } else {
+      // Upcoming (> 7 days) or no schedule data — quiet dormant state
+      // Don't use NONE in live mode: ambientStore normalizes NONE → GREEN when session_name === 'Race'
+      if (flagState !== 'CALM') {
+        setFlagState('CALM', nextRaceSession ? `Next: ${nextRaceSession.circuit_short_name ?? nextRaceSession.country_name ?? ''}` : '')
       }
     }
-  }, [mode, activeSession?.session_name, activeSession?.date_start, activeSession?.date_end, flagState, setFlagState])
+  }, [mode, raceProximity, activeSession?.session_name, activeSession?.date_start, activeSession?.date_end, flagState, setFlagState, nextRaceSession?.session_name, nextRaceSession?.circuit_short_name, nextRaceSession?.country_name])
 
   useEffect(() => {
     if (!onStartupProgressChange) return
@@ -804,6 +821,9 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
   const TOP_CHROME_TEXT_SHADOW = '0 1px 1px rgba(0,0,0,0.48), 0 0 6px rgba(0,0,0,0.26)'
 
   const { tabs, activeTabId } = useWorkspaceStore()
+  const { mode, setMode, activeSession } = useSessionStore()
+  const nextRaceYear = activeSession?.year ?? new Date().getFullYear()
+  const { session: nextRaceSession, proximity: raceProximity } = useNextRace(nextRaceYear)
   const toasts = useAmbientStore((s) => s.toasts)
   const flagState = useAmbientStore((s) => s.flagState)
   const leaderColorMode = useAmbientStore((s) => s.leaderColorMode)
@@ -815,6 +835,25 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sessionBrowserOpen, setSessionBrowserOpen] = useState(false)
   const [standingsOpen, setStandingsOpen] = useState(false)
+  const [showLiveModePrompt, setShowLiveModePrompt] = useState(false)
+  const [promptPresent, setPromptPresent] = useState(false)
+  const [promptClosing, setPromptClosing] = useState(false)
+  const [promptMessage, setPromptMessage] = useState('')
+  const liveModePromptShownRef = useRef(false)
+  const shown60MinPromptRef = useRef(false)
+  const shown30MinPromptRef = useRef(false)
+  const prevNextRaceKeyRef = useRef<number | null>(null)
+  const promptCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const liveMsToStart = nextRaceSession?.date_start
+    ? new Date(nextRaceSession.date_start).getTime() - now
+    : Infinity
   const logEntries = useLogStore((s) => s.entries)
   const hasErrors = logEntries.some((e) => e.level === 'ERR')
 
@@ -850,17 +889,45 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
     const openSettings = () => setSettingsOpen(true)
     const openSessionBrowser = () => setSessionBrowserOpen(true)
     const toggleLogPanel = () => setLogOpen((v) => !v)
+    const triggerLiveModePrompt = () => setShowLiveModePrompt(true)
 
     window.addEventListener('pitwall-open-settings', openSettings)
     window.addEventListener('pitwall-open-session-browser', openSessionBrowser)
     window.addEventListener('pitwall-toggle-log-panel', toggleLogPanel)
+    window.addEventListener('pitwall-trigger-live-mode-prompt', triggerLiveModePrompt)
 
     return () => {
       window.removeEventListener('pitwall-open-settings', openSettings)
       window.removeEventListener('pitwall-open-session-browser', openSessionBrowser)
       window.removeEventListener('pitwall-toggle-log-panel', toggleLogPanel)
+      window.removeEventListener('pitwall-trigger-live-mode-prompt', triggerLiveModePrompt)
     }
   }, [])
+
+  // Auto-show once per page load when a race goes live while in historical mode
+  useEffect(() => {
+    if (mode !== 'historical') return
+    if (raceProximity !== 'live') return
+    if (liveModePromptShownRef.current) return
+    liveModePromptShownRef.current = true
+    setShowLiveModePrompt(true)
+  }, [mode, raceProximity])
+
+  // Drive banner presence/exit animation from showLiveModePrompt
+  useEffect(() => {
+    if (showLiveModePrompt && mode === 'historical') {
+      if (promptCloseTimerRef.current) clearTimeout(promptCloseTimerRef.current)
+      setPromptPresent(true)
+      setPromptClosing(false)
+    } else if (promptPresent) {
+      setPromptClosing(true)
+      promptCloseTimerRef.current = setTimeout(() => {
+        setPromptPresent(false)
+        setPromptClosing(false)
+      }, 240)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLiveModePrompt, mode])
 
   return (
     <div className="animated-fade" style={{
@@ -1010,33 +1077,79 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
               WebkitAppRegion: 'no-drag',
             }}
           >
-            <div
-              style={{ cursor: 'pointer' }}
-              onClick={() => setSessionBrowserOpen(true)}
-              className="interactive-chip"
-            >
-              <SessionSelector />
-            </div>
-            <button
-              onClick={() => setStandingsOpen(true)}
-              className="interactive-button"
-              title="2026 Championship Standings"
-              style={{
-                background: 'none',
-                border: '0.5px solid var(--border)',
-                borderRadius: 3,
-                padding: '4px 10px',
-                fontFamily: 'var(--mono)',
-                fontSize: 8,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: 'var(--muted)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Standings
-            </button>
+            {mode === 'live' ? (
+              /* Live mode: race title in center; archive hidden */
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    fontFamily: 'var(--cond)', fontSize: 15, fontWeight: 800,
+                    letterSpacing: '0.04em', color: 'var(--white)',
+                    textTransform: 'uppercase', lineHeight: 1,
+                  }}>
+                    {nextRaceSession?.circuit_short_name ?? nextRaceSession?.country_name ?? 'Live'}
+                  </span>
+                  {nextRaceSession?.session_name && (
+                    <span style={{
+                      fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '0.12em',
+                      textTransform: 'uppercase', color: 'var(--muted2)',
+                    }}>
+                      {nextRaceSession.session_name}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setStandingsOpen(true)}
+                  className="interactive-button"
+                  title="2026 Championship Standings"
+                  style={{
+                    background: 'none',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 3,
+                    padding: '4px 10px',
+                    fontFamily: 'var(--mono)',
+                    fontSize: 8,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Standings
+                </button>
+              </>
+            ) : (
+              /* Historical mode: archive selector + standings */
+              <>
+                <div
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSessionBrowserOpen(true)}
+                  className="interactive-chip"
+                >
+                  <SessionSelector />
+                </div>
+                <button
+                  onClick={() => setStandingsOpen(true)}
+                  className="interactive-button"
+                  title="2026 Championship Standings"
+                  style={{
+                    background: 'none',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 3,
+                    padding: '4px 10px',
+                    fontFamily: 'var(--mono)',
+                    fontSize: 8,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Standings
+                </button>
+              </>
+            )}
           </div>
 
           <div
@@ -1071,6 +1184,39 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
               + Window
             </button>
           )}
+
+          {/* Mode indicator — click to toggle between live and historical */}
+          <button
+            onClick={() => setMode(mode === 'live' ? 'historical' : 'live')}
+            title={mode === 'live' ? 'Switch to historical mode' : 'Switch to live mode'}
+            className="interactive-button"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              background: 'none',
+              border: `0.5px solid ${mode === 'live' ? 'rgba(232,19,43,0.35)' : 'var(--border)'}`,
+              borderRadius: 3,
+              padding: '4px 10px',
+              fontFamily: 'var(--mono)',
+              fontSize: 8,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: mode === 'live' ? 'rgba(232,19,43,0.85)' : 'var(--muted2)',
+              cursor: 'pointer',
+              transition: 'color 0.3s ease, border-color 0.3s ease',
+            }}
+          >
+            <span style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: mode === 'live' ? 'var(--red)' : 'var(--muted2)',
+              flexShrink: 0,
+              transition: 'background 0.3s ease',
+            }} />
+            {mode === 'live' ? 'Live' : 'Hist'}
+          </button>
 
           {/* LOG button */}
           <button
@@ -1123,6 +1269,81 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
         </div>
       </div>
 
+      {/* Live mode prompt banner */}
+      {promptPresent && (
+        <div
+          className={promptClosing ? 'live-banner-exit' : 'live-banner'}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 999,
+            background: 'rgba(232,19,43,0.09)',
+            borderBottom: '0.5px solid rgba(232,19,43,0.28)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            paddingInline: 14,
+            height: 42,
+          }}
+        >
+          <span style={{
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: 'var(--red)',
+            flexShrink: 0,
+            animation: 'liveDotPulse 1.2s ease-in-out infinite',
+          }} />
+          <span style={{
+            fontFamily: 'var(--mono)',
+            fontSize: 8,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'rgba(232,19,43,0.85)',
+            flex: 1,
+          }}>
+            Race is live{nextRaceSession?.circuit_short_name ? ` · ${nextRaceSession.circuit_short_name}` : ''}
+          </span>
+          <button
+            onClick={() => { setMode('live'); setShowLiveModePrompt(false) }}
+            className="interactive-button"
+            style={{
+              background: 'rgba(232,19,43,0.12)',
+              border: '0.5px solid rgba(232,19,43,0.4)',
+              borderRadius: 3,
+              padding: '3px 10px',
+              fontFamily: 'var(--mono)',
+              fontSize: 8,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'rgba(232,19,43,0.9)',
+              cursor: 'pointer',
+            }}
+          >
+            Go Live
+          </button>
+          <button
+            onClick={() => setShowLiveModePrompt(false)}
+            className="interactive-button"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--muted2)',
+              cursor: 'pointer',
+              fontSize: 14,
+              lineHeight: 1,
+              padding: '0 2px',
+            }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Main canvas */}
       {activeTab && <Canvas tabId={activeTab.id} hideAddWidget={hideCanvasWidgetAdd} />}
 
@@ -1172,7 +1393,13 @@ export default function App() {
       return
     }
 
-    setStartupProgress((prev) => ({ ...prev, sessionReady: false, driversReady: false }))
+    // Skip the reset when data is already ready — this is a live/historical toggle,
+    // not initial startup. DataLayer's progress effect will correct downward if data
+    // genuinely isn't available (e.g., onboarding → live transition).
+    setStartupProgress((prev) => {
+      if (prev.sessionReady && prev.driversReady) return prev
+      return { ...prev, sessionReady: false, driversReady: false }
+    })
   }, [mode])
 
   useEffect(() => {

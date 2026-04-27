@@ -11,6 +11,8 @@ export type FlagState =
   | 'RED'
   | 'FASTEST_LAP'
   | 'CHECKERED'
+  | 'WAITING_FOR_START'
+  | 'NATIONAL_ANTHEM'
   | 'CALM'
   | 'NONE'
 

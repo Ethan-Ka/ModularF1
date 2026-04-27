@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLogStore, type LogLevel, type LogEntry } from '../../store/logStore'
 import { useAmbientStore, type FlagState } from '../../store/ambientStore'
 import { useSessionStore } from '../../store/sessionStore'
+import { useNextRace } from '../../hooks/useNextRace'
 
 const ALL_LEVELS: LogLevel[] = ['ERR', 'WARN', 'INFO', 'DBG']
 
@@ -87,6 +88,9 @@ function LogRow({ entry, index }: { entry: LogEntry; index: number }) {
 
 const FLAG_STATES: FlagState[] = [
   'NONE',
+  'CALM',
+  'WAITING_FOR_START',
+  'NATIONAL_ANTHEM',
   'GREEN',
   'YELLOW',
   'SAFETY_CAR',
@@ -110,13 +114,14 @@ function flagButtonColor(flag: FlagState): string {
 
 function DevPanel() {
   const mode = useSessionStore((s) => s.mode)
+  const setMode = useSessionStore((s) => s.setMode)
   const activeSession = useSessionStore((s) => s.activeSession)
   const ambientLayerEnabled   = useAmbientStore((s) => s.ambientLayerEnabled)
   const ambientLayerIntensity = useAmbientStore((s) => s.ambientLayerIntensity)
+  const { proximity, session: nextRace, msToStart } = useNextRace(activeSession?.year ?? new Date().getFullYear())
 
   return (
     <div style={{
-      height: 136,
       borderTop: '0.5px solid var(--border2)',
       background: 'var(--bg)',
       padding: '8px 12px',
@@ -164,26 +169,19 @@ function DevPanel() {
         })}
       </div>
 
-      {/* Row 2: Toast test + App state */}
+      {/* Row 2: App state */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <button
-          onClick={() => useAmbientStore.getState().addToast('Test toast from dev panel', 'GREEN')}
-          style={{
-            padding: '2px 8px',
-            borderRadius: 2,
-            border: '0.5px solid var(--border2)',
-            background: 'var(--bg4)',
-            fontFamily: 'var(--mono)',
-            fontSize: 7,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: 'var(--muted)',
-            cursor: 'pointer',
-          }}
-        >
-          Fire toast
-        </button>
-
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--muted2)',
+          flexShrink: 0,
+          width: 52,
+        }}>
+          State
+        </span>
         <span style={{
           fontFamily: 'var(--mono)',
           fontSize: 7,
@@ -283,6 +281,108 @@ function DevPanel() {
           {ambientLayerIntensity}%
         </span>
       </div>
+
+      {/* Row 4: Live mode trigger */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--muted2)',
+          flexShrink: 0,
+          width: 52,
+        }}>
+          Mode
+        </span>
+        {(['historical', 'live'] as const).map((m) => {
+          const active = mode === m
+          const color = active ? 'var(--white)' : 'var(--muted2)'
+          return (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              style={{
+                padding: '1px 6px',
+                borderRadius: 2,
+                border: `0.5px solid ${active ? 'var(--border2)' : 'var(--border)'}`,
+                background: active ? 'var(--bg4)' : 'transparent',
+                fontFamily: 'var(--mono)',
+                fontSize: 7,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color,
+                cursor: 'pointer',
+              }}
+            >
+              {m}
+            </button>
+          )
+        })}
+        {nextRace && (
+          <span style={{
+            fontFamily: 'var(--mono)',
+            fontSize: 7,
+            color: 'var(--muted2)',
+            letterSpacing: '0.06em',
+            marginLeft: 4,
+          }}>
+            next: <span style={{ color: 'var(--muted)' }}>
+              {nextRace.circuit_short_name ?? nextRace.country_name} · {proximity}
+              {proximity === 'imminent' ? ` · ${Math.floor(msToStart / 60000)}m` : ''}
+            </span>
+          </span>
+        )}
+      </div>
+
+      {/* Row 5: Notifications */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 7,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--muted2)',
+          flexShrink: 0,
+          width: 52,
+        }}>
+          Notifs
+        </span>
+        <button
+          onClick={() => useAmbientStore.getState().addToast('Test toast from dev panel', 'GREEN')}
+          style={{
+            padding: '1px 6px',
+            borderRadius: 2,
+            border: '0.5px solid var(--border2)',
+            background: 'transparent',
+            fontFamily: 'var(--mono)',
+            fontSize: 7,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'var(--muted)',
+            cursor: 'pointer',
+          }}
+        >
+          Fire toast
+        </button>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('pitwall-trigger-live-mode-prompt'))}
+          style={{
+            padding: '1px 6px',
+            borderRadius: 2,
+            border: '0.5px solid rgba(232,19,43,0.4)',
+            background: 'transparent',
+            fontFamily: 'var(--mono)',
+            fontSize: 7,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'rgba(232,19,43,0.75)',
+            cursor: 'pointer',
+          }}
+        >
+          Fire prompt
+        </button>
+      </div>
     </div>
   )
 }
@@ -359,7 +459,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
       left: 0,
       right: 0,
       bottom: 0,
-      height: devOpen ? 376 : 240,
+      height: devOpen ? 420 : 240,
       background: 'var(--bg3)',
       borderTop: '0.5px solid var(--border2)',
       zIndex: 300,

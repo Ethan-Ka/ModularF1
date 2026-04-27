@@ -358,6 +358,26 @@ html, body {
   }
 }
 
+@keyframes liveBannerIn {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+@keyframes liveBannerOut {
+  from { transform: translateY(0);     opacity: 1; }
+  to   { transform: translateY(-100%); opacity: 0; }
+}
+@keyframes liveDotPulse {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+.live-banner {
+  animation: liveBannerIn 0.32s var(--motion-spring, cubic-bezier(0.34,1.56,0.64,1)) both;
+}
+.live-banner-exit {
+  animation: liveBannerOut 0.22s var(--motion-in-out, ease-in) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 1ms !important;

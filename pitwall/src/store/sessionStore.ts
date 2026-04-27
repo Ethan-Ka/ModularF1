@@ -39,7 +39,7 @@ export const useSessionStore = create<SessionStore>()(
       mode: 'onboarding',
       activeSession: null,
       apiRequestsEnabled: true,
-      setApiKey: (key) => set({ apiKey: key, mode: 'live' }),
+      setApiKey: (key) => set({ apiKey: key, mode: 'historical' }),
       clearApiKey: () => set({ apiKey: null, mode: 'historical' }),
       setMode: (mode) => set({ mode }),
       setActiveSession: (session) => set({ activeSession: session }),

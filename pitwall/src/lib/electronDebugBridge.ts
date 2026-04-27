@@ -299,6 +299,10 @@ function runDebugAction(action: string, payload?: unknown) {
       window.dispatchEvent(new Event('pitwall-toggle-log-panel'))
       log.addEntry('DBG', 'Toggled Diagnostic Log from menu action.', 'devtools')
       break
+    case 'trigger-live-mode-prompt':
+      window.dispatchEvent(new Event('pitwall-trigger-live-mode-prompt'))
+      log.addEntry('DBG', 'Triggered live mode prompt from Developer Menu.', 'devtools')
+      break
     case 'loading-preview-toggle':
       window.dispatchEvent(new Event('pitwall-loading-preview-toggle'))
       log.addEntry('DBG', 'Toggled loading preview from Developer Menu.', 'devtools')

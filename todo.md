@@ -1,20 +1,22 @@
 
 # Urgent To Do 
 
-LOOPING ONNBOARDING SCREEN
+The onboarding srceen comes up every time
 
-Automatically detect when a race is about to start and shift into live mode.
-Show an "upcoming race" state in the ambient bar with a distinct color.
-Only show the green ambient bar when the race is actually live.
-If no live API key is present or the user desires, allow fallback to historical mode (onboarding prompt or fallback button).
-I will start by updating the session detection and ambient bar logic in App.tsx and AmbientBar.tsx, and add a fallback to historical mode if no live key is present.
+Also fix the multiple window system
 
-Your codebase has multiple destructurings of useSessionStore() in different scopes, which caused the patch to fail due to context mismatch. To proceed, I will:
+Consolidate a bunch of methods and everything to make plugins/widgets as simple as possible to implement
 
-Update the destructuring in the correct scope in App.tsx to include setMode and apiKey.
-Add the automatic mode detection effect at the top level of the App component.
-Update the DataLayer effect to set the CALM flag for upcoming races.
-Let me make these changes step by step for clarity and reliability.
+
+i messed up the settings page
+
+Live mode is allowed only if OpenF1 API key is present
+
+When toggling between the fastf1/openf1 switcher, don't re-open the onboarding screen
+
+Move FastF1/OpenF1 switcher and the fastF1 settings to the account area: The FastF1 authentication and server status UI will be moved into the "Account & Mode" section at the top of the settings panel, under the dedicated switch for the switcher.
+Move OpenF1 API key under the FastF1/OpenF1 switchers: The API key input and display will be grouped under the data source switchers, making it clear which key is used for which mode.
+Live mode checks should be satisfied by F1TV sign-in: The "Live" mode button will be enabled if either an OpenF1 API key is present or the user is authenticated with F1TV (FastF1).
 
 # To Do
 

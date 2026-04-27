@@ -27,7 +27,7 @@ export function useLatestSession() {
   const mode = useSessionStore((s) => s.mode)
   const apiRequestsEnabled = useSessionStore((s) => s.apiRequestsEnabled)
   return useQuery({
-    queryKey: ['sessions', 'latest', apiKey ? 'auth' : 'anon', mode],
+    queryKey: ['sessions', 'latest', apiKey ? 'auth' : 'anon'],
     queryFn: () => fetchLatestSession(apiKey),
     enabled: mode !== 'onboarding' && apiRequestsEnabled,
     ...queryModePolicy(mode, {

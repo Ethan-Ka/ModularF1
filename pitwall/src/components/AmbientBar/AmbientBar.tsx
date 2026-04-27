@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAmbientStore } from '../../store/ambientStore'
 import { useDriverStore } from '../../store/driverStore'
+import { useSessionStore } from '../../store/sessionStore'
 import { resolveTeamPalette } from '../../lib/teamPalette'
 import { FLAG_COLORS, getFlagLabel, getTransitionDuration } from './flagStateMachine'
 import { ToastQueue } from './ToastQueue'
@@ -87,6 +88,7 @@ export function AmbientBar({ embedded = false, toolbar = false, transparentBackg
   const leaderDriverNumber = useAmbientStore((s) => s.leaderDriverNumber)
   const toasts         = useAmbientStore((s) => s.toasts)
   const bannerMessage  = useAmbientStore((s) => s.bannerMessage)
+  const appMode        = useSessionStore((s) => s.mode)
   const getDriver      = useDriverStore((s) => s.getDriver)
 
   // In-bar message animation state
@@ -212,8 +214,8 @@ export function AmbientBar({ embedded = false, toolbar = false, transparentBackg
   const msgY       = msgPhase === 'in' ? '6px' : '0px'
   const compact = embedded || toolbar
   const embeddedBgAlpha = toolbar
-    ? (flagState === 'GREEN' ? 0.42 : flagState === 'NONE' ? 0.06 : 0.34)
-    : (flagState === 'GREEN' ? 0.64 : flagState === 'NONE' ? 0.08 : 0.5)
+    ? (flagState === 'GREEN' ? 0.42 : flagState === 'NONE' ? 0.05 : flagState === 'CALM' ? 0.10 : flagState === 'WAITING_FOR_START' ? 0.22 : 0.34)
+    : (flagState === 'GREEN' ? 0.64 : flagState === 'NONE' ? 0.07 : flagState === 'CALM' ? 0.14 : flagState === 'WAITING_FOR_START' ? 0.32 : 0.5)
 
   const textColor = applyLeaderTint
     ? (leaderPalette?.secondary ?? leaderPalette?.primary ?? colors.text)
@@ -254,9 +256,11 @@ export function AmbientBar({ embedded = false, toolbar = false, transparentBackg
         pointerEvents: 'none',
       }}
     >
-      {/* Next Race Display */}
-      {!compact && <NextRaceDisplay year={2026} />}
-      {!hideFlagBadge && (
+      {/* Inline next-race countdown — only in live mode and non-active-race flag states */}
+      {!compact && appMode === 'live' && (flagState === 'NONE' || flagState === 'CALM' || flagState === 'WAITING_FOR_START') && (
+        <NextRaceDisplay />
+      )}
+      {!hideFlagBadge && flagState !== 'CALM' && (
         <>
           {/* Flag swatch */}
           <div style={{
@@ -349,13 +353,13 @@ export function AmbientBar({ embedded = false, toolbar = false, transparentBackg
         </div>
       )}
 
-      {/* Bottom glow line */}
+      {/* Bottom glow line — thicker for active states, hairline for idle */}
       <div style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: 1,
+        height: flagState === 'NONE' ? 1 : flagState === 'CALM' ? 1 : 1.5,
         background: (applyLeaderTint && leaderPalette)
           ? (leaderPalette.secondary
               ? `linear-gradient(90deg, transparent 0%, ${withAlpha(leaderPalette.primary, 0.52)} 26%, ${leaderPalette.primary} 42%, ${leaderPalette.secondary} 58%, ${withAlpha(leaderPalette.secondary, 0.52)} 74%, transparent 100%)`
@@ -363,7 +367,7 @@ export function AmbientBar({ embedded = false, toolbar = false, transparentBackg
           : colors.flagColor === 'transparent'
           ? 'var(--border)'
           : `linear-gradient(90deg, transparent 0%, ${colors.glow}88 30%, ${colors.glow} 50%, ${colors.glow}88 70%, transparent 100%)`,
-        transition: `background ${duration} ease`,
+        transition: `background ${duration} ease, height ${duration} ease`,
         animation: !compact && colors.pulse ? 'glowLinePulse 1s ease-in-out infinite' : undefined,
         zIndex: 1,
       }} />

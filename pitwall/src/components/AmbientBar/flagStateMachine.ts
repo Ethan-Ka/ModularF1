@@ -146,16 +146,17 @@ export const FLAG_COLORS: Record<FlagState, FlagColors> = {
     waveColors: ['#6b6383', '#83799d', '#595171', '#9488ad', '#6f6788', '#544c6c'],
   },
   CALM: {
-    background: '#101010',
+    background: '#0e0e0e',
     glow: '#EDE8DC',
     text: '#EDE8DC',
     flagColor: '#EDE8DC',
     pulse: false,
     pulseHz: 0,
     pulseBurstMs: 0,
-    flagWave: false,
-    waveSpeed: 0,
-    waveColors: [],
+    flagWave: true,
+    waveSpeed: 9.5,
+    // Very dark, near-invisible breathing shimmer — conveys "dormant but watching"
+    waveColors: ['#1c1c1c', '#161616', '#1a1a1a', '#141414', '#1e1e1e', '#121212'],
   },
   NONE: {
     background: 'var(--bg2)',
@@ -182,7 +183,7 @@ export function getFlagLabel(state: FlagState): string {
     case 'GREEN': return 'Green flag — racing'
     case 'WAITING_FOR_START': return 'Waiting for race start'
     case 'NATIONAL_ANTHEM': return 'National anthem'
-    case 'CALM': return 'Calm mode'
+    case 'CALM': return ''
     case 'NONE': return '—'
   }
 }
@@ -196,9 +197,10 @@ export function getTransitionDuration(state: FlagState): string {
     case 'FASTEST_LAP': return '0.3s'
     case 'CHECKERED': return '1.0s'
     case 'GREEN': return '1.2s'
-    case 'WAITING_FOR_START': return '1.6s'
-    case 'NATIONAL_ANTHEM': return '1.8s'
-    case 'CALM': return '2.0s'
+    case 'WAITING_FOR_START': return '2.4s'
+    case 'NATIONAL_ANTHEM': return '2.8s'
+    case 'CALM': return '3.0s'
+    case 'NONE': return '1.8s'
     default: return '1.2s'
   }
 }

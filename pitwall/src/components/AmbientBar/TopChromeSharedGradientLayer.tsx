@@ -135,7 +135,13 @@ export function TopChromeSharedGradientLayer({ transitionY, tailFadePx }: TopChr
     fillSecondary = secondary
   }
 
-  const gradientAlpha = flagState === 'NONE' ? 0.08 : flagState === 'GREEN' ? 0.42 : 0.34
+  const gradientAlpha =
+    flagState === 'NONE' ? 0.07
+    : flagState === 'CALM' ? 0.12
+    : flagState === 'WAITING_FOR_START' ? 0.28
+    : flagState === 'NATIONAL_ANTHEM' ? 0.26
+    : flagState === 'GREEN' ? 0.42
+    : 0.34
   const effectiveBackground = fillSecondary
     ? `linear-gradient(90deg, ${withAlpha(fill, gradientAlpha)} 0%, ${withAlpha(fill, gradientAlpha)} 58%, ${withAlpha(fillSecondary, gradientAlpha)} 100%)`
     : withAlpha(fill, gradientAlpha)

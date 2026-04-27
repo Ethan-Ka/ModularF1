@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from 'react'
 import { useAmbientStore } from '../../store/ambientStore'
-import { FLAG_COLORS } from './flagStateMachine'
+import { FLAG_COLORS, getTransitionDuration } from './flagStateMachine'
 
 const STYLE_ID = 'ambient-top-chrome-wave-keyframes'
 if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
@@ -57,9 +58,43 @@ export function TopChromeWaveLayer({ transitionY, tailFadePx }: TopChromeWaveLay
   const waveEnabled = useAmbientStore((s) => s.ambientLayerWaveEnabled)
 
   const colors = FLAG_COLORS[flagState]
-  if (!waveEnabled || !colors.flagWave || colors.waveColors.length === 0) return null
+  const hasWave = waveEnabled && colors.flagWave && colors.waveColors.length > 0
+  const duration = getTransitionDuration(flagState)
 
-  const waveSpeedScale = colors.waveSpeed > 0 ? colors.waveSpeed / 2.4 : 1
+  // Keep last known wave config so we can fade out rather than snap to null
+  const lastWaveRef = useRef(colors)
+  const [visible, setVisible] = useState(hasWave)
+  const [displayColors, setDisplayColors] = useState(colors)
+  const unmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (unmountTimerRef.current) {
+      clearTimeout(unmountTimerRef.current)
+      unmountTimerRef.current = null
+    }
+
+    if (hasWave) {
+      lastWaveRef.current = colors
+      setDisplayColors(colors)
+      setVisible(true)
+    } else {
+      setVisible(false)
+      // Keep DOM alive until the CSS opacity transition finishes
+      const ms = parseFloat(duration) * 1000 + 400
+      unmountTimerRef.current = setTimeout(() => {
+        setDisplayColors(lastWaveRef.current)
+      }, ms)
+    }
+
+    return () => {
+      if (unmountTimerRef.current) clearTimeout(unmountTimerRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasWave, flagState])
+
+  if (!displayColors.flagWave || displayColors.waveColors.length === 0) return null
+
+  const waveSpeedScale = displayColors.waveSpeed > 0 ? displayColors.waveSpeed / 2.4 : 1
 
   return (
     <div
@@ -73,13 +108,14 @@ export function TopChromeWaveLayer({ transitionY, tailFadePx }: TopChromeWaveLay
         overflow: 'hidden',
         pointerEvents: 'none',
         zIndex: 0,
-        // Fade the wave layer out before it reaches the canvas region.
+        opacity: visible ? 1 : 0,
+        transition: `opacity ${duration} ease`,
         maskImage: `linear-gradient(180deg, black 0px, black ${transitionY}px, transparent ${transitionY + tailFadePx}px)`,
         WebkitMaskImage: `linear-gradient(180deg, black 0px, black ${transitionY}px, transparent ${transitionY + tailFadePx}px)`,
       }}
     >
       {WAVE_BLOBS.map((blob, i) => {
-        const blobColor = colors.waveColors[i % colors.waveColors.length]
+        const blobColor = displayColors.waveColors[i % displayColors.waveColors.length]
         const dur = Number.parseFloat(blob.dur) * waveSpeedScale
         return (
           <div
