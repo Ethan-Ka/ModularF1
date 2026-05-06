@@ -21,7 +21,7 @@ Improve scrolling for the season calendar - horizontal scrolling and a scroll-dr
 - [ ] Hide calendar lines that are not related (incoming our outgoing) to the current race
 - [ ] Make all text larger
 - [ ] Drievrs championship mode is left aligned
-- [ ] decrease size of the bubble, make the bubble on top
+- [ ] decrease size of the bubble on the season calendar map location, make the bubble on top
 - [ ] make the map serve a purpose
 - [ ] remove vignette around window
 - [ ] in the bottom of the next race display(bottom left)
