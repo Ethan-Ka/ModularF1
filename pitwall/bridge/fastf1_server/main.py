@@ -160,7 +160,6 @@ _HEADLINES_TTL = 300  # 5 minutes
 
 RSS_FEEDS = [
     "https://www.formula1.com/en/latest/all.xml",
-    "https://www.fia.com/rss/news",
     "https://feeds.bbci.co.uk/sport/formula1/rss.xml",
     "https://www.motorsport.com/rss/f1/news/",
     "https://www.espn.com/f1/",
