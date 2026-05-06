@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="Status" src="https://img.shields.io/badge/status-alpha_v0.2.5-E8132B" />
+  <img alt="Status" src="https://img.shields.io/badge/status-alpha_v0.3.0-E8132B" />
   <img alt="Stack" src="https://img.shields.io/badge/stack-React%20%7C%20TypeScript%20%7C%20Vite-1AACB8" />
   <img alt="Data" src="https://img.shields.io/badge/data-OpenF1-3671C6" />
   <img alt="Data" src="https://img.shields.io/badge/data-FastF1-3671C6" />

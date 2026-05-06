@@ -514,7 +514,7 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
       const entry = entries[0]
       if (!entry) return
       const w = Math.floor(entry.contentRect.width)
-      setGlobeSize({ width: w, height: Math.round(w * 0.62) })
+      setGlobeSize({ width: w, height: Math.round(w * 0.72) })
     })
     ro.observe(wrapperRef.current)
     return () => ro.disconnect()
@@ -725,6 +725,7 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
               onClick={isImminent ? () => setMode('live') : undefined}
               style={{
                 flex: '0 0 100%',
+                minHeight: 306,
                 scrollSnapAlign: 'start',
                 display: 'grid',
                 gridTemplateColumns: trackSvgUrl ? '1fr 140px' : '1fr',
@@ -938,8 +939,9 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
               {/* ── Track SVG ── */}
               {trackSvgUrl && (
                 <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   paddingLeft: 10, opacity: done && !isNext ? 0.2 : isNext ? 0.9 : 0.55,
+                  height: '100%',
                   transition: 'opacity 0.8s',
                   alignSelf: 'stretch',
                 }}>
