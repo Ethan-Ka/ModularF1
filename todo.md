@@ -14,6 +14,8 @@ Popped out widgets need to sync up with the nmain window - starred drivers, focu
 
 # SeasonHub To Do
 
+Improve scrolling for the season calendar - horizontal scrolling and a scroll-driven animation with a cliff for the bottom part but a steady scroll for the top part. If released before the cliff then it just goes back to the current race
+
 - [ ] populate season calendar map more
 - [ ] decrease size of season caelndar lines
 - [ ] Hide calendar lines that are not related (incoming our outgoing) to the current race
