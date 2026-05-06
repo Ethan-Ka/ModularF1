@@ -90,9 +90,11 @@ Pitwall uses a 24-column drag-and-drop grid. Widgets can be freely repositioned 
 
 ### Widgets
 
-| Sector Mini Cards | Strategy Timeline | Pitstop Log | Tire Status |
-|---|---|---|---|
-| ![Sector Mini Cards](plan/demo/sectorMiniCards.png) | ![Strategy Timeline](plan/demo/strategyTimeline.png) | ![Pitstop Log](plan/demo/pitstoplog.png) | ![Tire Status](plan/demo/inference.png) |
+| Sector Mini Cards | Strategy Timeline |
+|---|---|
+| ![Sector Mini Cards](plan/demo/sectorMiniCards.png) | ![Strategy Timeline](plan/demo/strategyTimeline.png) | 
+| **Pitstop Log** | **Tire Status** |
+| ![Pitstop Log](plan/demo/pitstoplog.png) | ![Tire Status](plan/demo/inference.png) |
 ---
 
 ## Driver targeting system
