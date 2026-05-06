@@ -19,6 +19,7 @@ import { ToastQueue } from './components/AmbientBar/ToastQueue'
 import { TopChromeSharedGradientLayer } from './components/AmbientBar/TopChromeSharedGradientLayer'
 import { TopChromeWaveLayer } from './components/AmbientBar/TopChromeWaveLayer'
 import { FLAG_COLORS } from './components/AmbientBar/flagStateMachine'
+import { useSmoothScroll } from './hooks/useSmoothScroll'
 import { useDrivers } from './hooks/useDrivers'
 import { useSeasonStandings } from './hooks/useSeasonStandings'
 import { useLatestSession, useSessions } from './hooks/useSession'
@@ -1262,6 +1263,8 @@ export default function App() {
   const [loadingPreviewProgress, setLoadingPreviewProgress] = useState<StartupProgressState>(makeEmptyStartupProgress)
   const [overlayMounted, setOverlayMounted] = useState(false)
   const [overlayVisible, setOverlayVisible] = useState(false)
+
+  useSmoothScroll()
 
   useEffect(() => {
     if (mode === 'onboarding') {

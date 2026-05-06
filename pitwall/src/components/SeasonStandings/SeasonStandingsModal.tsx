@@ -147,7 +147,7 @@ function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerInd
             color: positionAccentColor(rank),
             lineHeight: 1,
             letterSpacing: '-0.02em',
-            textAlign: 'right',
+            textAlign: 'left',
           }}
         >
           P{rank}

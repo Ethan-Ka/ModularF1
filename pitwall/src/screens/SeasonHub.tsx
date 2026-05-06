@@ -722,21 +722,12 @@ export function SeasonHub() {
             Standings
           </button>
           <button
-            onClick={() => setDriverPickerOpen(true)}
-            title="Open driver picker"
-            style={navBtn}
-          >
-            Drivers
-          </button>
-          <button
             onClick={() => setLogOpen((v) => !v)}
             title="Open diagnostic log"
             style={{ ...navBtn, color: hasErrors ? 'var(--red)' : 'var(--muted2)' }}
           >
             Log
           </button>
-          <button onClick={() => setMode('demo')} style={navBtn}>Canvas</button>
-          <button onClick={() => setSettingsOpen(true)} style={{ ...navBtn, color: 'var(--muted)' }}>Settings</button>
         </div>
       </div>
 
@@ -778,6 +769,33 @@ export function SeasonHub() {
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(255,255,255,0.07) transparent',
         }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, right: 4, }}>
+            {([
+              { label: 'Settings', action: () => setSettingsOpen(true) },
+              { label: 'Drivers',  action: () => setDriverPickerOpen(true) },
+              { label: 'Edit Canvas',   action: () => setMode('demo') },
+            ] as { label: string; action: () => void }[]).map(({ label, action }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={action}
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '0.5px solid rgba(255,255,255,0.18)',
+                  borderRadius: 999,
+                  padding: '7px 18px',
+                  fontFamily: 'var(--mono)',
+                  fontSize: 11,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.82)',
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <NextRaceCard />
           <HeadlinesFeed />
           <ChampionshipStandingsSection />

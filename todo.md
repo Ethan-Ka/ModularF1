@@ -1,5 +1,7 @@
 # Urgent To Do 
 
+Make app run in 60fps :(
+
 FIX THE SECTOR MAP AND TRACK MAP
 
 rewrite the sectormap widget. It should be an image of the deatiled track(the one that has sectors) and then use the track and drivers that are rendered on teh track map and overlay it over the detailed track map. This is to keep the positioning of the drivers intact. There should be an algorithm to determine the detailed track map positioning, and adjus tthe overlayed regular track map to match. This is because the detailed track maps don't match the size and rotation of the regular track maps. You should use sectormap/index.tsx for the widget. Don't focus on the current implemnentation. It is not working ad I want to scrap it
@@ -17,29 +19,29 @@ Popped out widgets need to sync up with the nmain window - starred drivers, focu
 Improve scrolling for the season calendar - horizontal scrolling and a scroll-driven animation with a cliff for the bottom part but a steady scroll for the top part. If released before the cliff then it just goes back to the current race
 
 - [ ] populate season calendar map more
-- [ ] decrease size of season caelndar lines
-- [ ] Hide calendar lines that are not related (incoming our outgoing) to the current race
+- [x] decrease size of season caelndar lines
+- [x] Hide calendar lines that are not related (incoming our outgoing) to the current race
 - [ ] Make all text larger
-- [ ] Drievrs championship mode is left aligned
-- [ ] decrease size of the bubble on the season calendar map location, make the bubble on top
+- [x] Drievrs championship mode is left aligned
+- [x] decrease size of the bubble on the season calendar map location, make the bubble on top
 - [ ] make the map serve a purpose
-- [ ] remove vignette around window
-- [ ] in the bottom of the next race display(bottom left)
-  - [ ] Add settings button
-  - [ ] account login/logout stuff
-  - [ ] Driver manager button
-  - [ ] canvas view button
+- [x] remove vignette around window
+- [x] in the bottom of the next race display(bottom left)
+  - [x] Add settings button
+  - [x] account login/logout stuff
+  - [x] Driver manager button
+  - [x] canvas view button
 - [ ] Make pitwall logo larger across the app (and the bar)
 - [x] Fix season standings thing/data
   - [x] Constructors is fixed when I load live modes and open the standings popup
 - [x] Fix season roadmap
-  - [ ] add more track data
+  - [x] add more track data
 - [ ] Fix demo mode track map
 - [ ] make logging log errors from console
 - [ ] Update settings
 - [ ] Make configuring canvas clearer
-- [ ] add legend for races back to the bottom of the reason roadmap
-- [ ] improve sources for the headlines - more interesting headlines
+- [x] add legend for races back to the bottom of the reason roadmap
+- [x] improve sources for the headlines - more interesting headlines
 - [ ] Add timezone to next race time display
 - [ ] add a bunch of stuff to the loading sequence
 - [ ] popup modals are embedded into previous popup modals
