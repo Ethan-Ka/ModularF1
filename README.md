@@ -88,6 +88,11 @@ Pitwall uses a 24-column drag-and-drop grid. Widgets can be freely repositioned 
 - **Resize**: Drag the southeast corner of any widget. Minimum dimensions are enforced per widget type.
 - **Pop out**: Widgets can be detached into their own window on Electron builds.
 
+### Widgets
+
+| Sector Mini Cards | Strategy Timeline | Pitstop Log | Tire Status |
+|---|---|---|---|
+| ![Sector Mini Cards](plan/demo/sectorMiniCards.png) | ![Strategy Timeline](plan/demo/strategyTimeline.png) | ![Pitstop Log](plan/demo/pitstoplog.png) | ![Tire Status](plan/demo/inference.png) |
 ---
 
 ## Driver targeting system
@@ -108,15 +113,19 @@ Every focus-enabled widget has a **driver context** — a mode that determines w
 
 Multiple instances of the same widget can run on the same canvas, each targeting a different driver. The badge in each widget header shows which mode is active and which driver is resolved.
 
-| Driver manager and starring | Same widget type, different driver targets |
-|---|---|
-| ![Driver Manager](plan/demo/driverManager.png) | ![Driver Select and Individual](plan/demo/driverSelectAndIndividual.png) |
+| Same widget type, different driver targets |
+|---|
+| ![Driver Select and Individual](plan/demo/driverSelectAndIndividual.png) |
 
 ---
 
 ## Driver manager
 
 The driver manager is the central hub for driver configuration. It handles season data, starred drivers, canvas focus, and team color overrides.
+
+| Driver Manager |
+| --- |
+|![Driver Manager](plan/demo/driverManager.png)|
 
 | Feature | Description |
 |---|---|
