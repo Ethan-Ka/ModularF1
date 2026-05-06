@@ -4,7 +4,9 @@ import { useWorkspaceStore } from './store/workspaceStore'
 import { useAmbientStore } from './store/ambientStore'
 import { useDriverStore } from './store/driverStore'
 import { useLogStore } from './store/logStore'
+import { useFakeTelemetryStore } from './store/fakeTelemetryStore'
 import { ApiKeyOnboarding } from './screens/ApiKeyOnboarding'
+import { SeasonHub } from './screens/SeasonHub'
 import { AmbientBar } from './components/AmbientBar/AmbientBar'
 import { AmbientRaceLayer } from './components/AmbientRaceLayer/AmbientRaceLayer'
 import { FocusStrip } from './components/DriverManager/FocusStrip'
@@ -12,7 +14,6 @@ import { CanvasTabs } from './components/Canvas/CanvasTabs'
 import { Canvas } from './components/Canvas/Canvas'
 import { DiagnosticLog } from './components/DiagnosticLog/DiagnosticLog'
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel'
-import { SessionBrowserModal } from './components/SessionBrowser/SessionBrowserModal'
 import { SeasonStandingsModal } from './components/SeasonStandings/SeasonStandingsModal'
 import { ToastQueue } from './components/AmbientBar/ToastQueue'
 import { TopChromeSharedGradientLayer } from './components/AmbientBar/TopChromeSharedGradientLayer'
@@ -338,42 +339,34 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
 
   const latestSessionQuery = useLatestSession()
   const latestSession = latestSessionQuery.data
-  const { activeSession, setActiveSession, mode, setMode, apiKey, apiRequestsEnabled, dataSource } = useSessionStore()
+  const { activeSession, setActiveSession, mode, setMode, apiKey, apiRequestsEnabled } = useSessionStore()
 
   // Race proximity for pre-race ambient state — uses the same year as the active session
   const nextRaceYear = activeSession?.year ?? new Date().getFullYear()
   const { proximity: raceProximity, session: nextRaceSession } = useNextRace(nextRaceYear)
 
-  // --- Credential gating: advance out of onboarding, never force back into it ---
-  // Toggling data sources from Settings must not re-open onboarding.
+  // Credential gating: advance out of onboarding, never force back into it.
   useEffect(() => {
-    // FastF1 needs no key — skip onboarding
-    if (dataSource === 'fastf1' && mode === 'onboarding') {
-      setMode('historical')
-      return
-    }
-    // OpenF1 key arrived while still on onboarding screen — advance
-    if (dataSource === 'openf1' && mode === 'onboarding' && apiKey) {
-      setMode('historical')
-      return
-    }
-  }, [apiKey, dataSource, mode, setMode])
+    if (mode === 'onboarding' && apiKey) setMode('hub')
+  }, [apiKey, mode, setMode])
+
   const { setLeader, flagState, setFlagState } = useAmbientStore()
   const { drivers, seasonYear, getTeamColor, importSeasonFromPublic } = useDriverStore()
   const positions = positionsQuery.data
   const [seasonBootstrapDone, setSeasonBootstrapDone] = useState(false)
   const seasonBootstrapAttemptRef = useRef<number | null>(null)
 
-  // Clear ambient state when entering historical mode — the bar should be dark
+  // Clear ambient state when entering hub mode
   useEffect(() => {
-    if (mode === 'historical' && flagState !== 'NONE') {
+    if (mode === 'hub' && flagState !== 'NONE') {
       setFlagState('NONE')
     }
   }, [mode, flagState, setFlagState])
 
-  // Auto-select latest session if none active
+  // Auto-select latest session only in live mode
   useEffect(() => {
-    if (mode !== 'onboarding' && !activeSession && latestSession?.[0]) {
+    if (mode !== 'live') return
+    if (!activeSession && latestSession?.[0]) {
       setActiveSession(latestSession[0])
     }
   }, [latestSession, activeSession, mode, setActiveSession])
@@ -711,58 +704,6 @@ function BroadcastSync() {
   return null
 }
 
-// Session selector component (toolbar center)
-function SessionSelector() {
-  const { activeSession } = useSessionStore()
-  const { data: sessions } = useLatestSession()
-
-  if (!activeSession && !sessions?.length) {
-    return (
-      <span style={{
-        fontFamily: 'var(--mono)',
-        fontSize: 9,
-        color: 'var(--muted2)',
-        letterSpacing: '0.08em',
-      }}>
-        No session
-      </span>
-    )
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{
-        fontFamily: 'var(--mono)',
-        fontSize: 9,
-        letterSpacing: '0.1em',
-        color: 'var(--muted2)',
-        textTransform: 'uppercase',
-      }}>
-        {activeSession?.circuit_short_name ?? '—'}
-      </span>
-      <span style={{
-        fontFamily: 'var(--mono)',
-        fontSize: 9,
-        letterSpacing: '0.08em',
-        color: 'var(--muted)',
-      }}>
-        {activeSession?.session_name ?? '—'}
-      </span>
-      {activeSession?.year && (
-        <span style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 8,
-          color: 'var(--muted2)',
-          padding: '1px 5px',
-          border: '0.5px solid var(--border)',
-          borderRadius: 2,
-        }}>
-          {activeSession.year}
-        </span>
-      )}
-    </div>
-  )
-}
 
 function PopoutLayout() {
   const popoutWidgetId = useWindowStore((s) => s.popoutWidgetId)
@@ -812,7 +753,7 @@ function PopoutLayout() {
   )
 }
 
-function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
+function MainLayout({ hideCanvasWidgetAdd, demoMode = false }: { hideCanvasWidgetAdd: boolean; demoMode?: boolean }) {
   const TOP_CHROME_STACK_HEIGHT = 102
   const TOP_CHROME_TRANSITION_Y = 54
   const TOP_CHROME_TAIL_FADE_PX = 60
@@ -822,9 +763,9 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
   const TOP_CHROME_TEXT_SHADOW = '0 1px 1px rgba(0,0,0,0.48), 0 0 6px rgba(0,0,0,0.26)'
 
   const { tabs, activeTabId } = useWorkspaceStore()
-  const { mode, setMode, activeSession } = useSessionStore()
+  const { setMode, activeSession } = useSessionStore()
   const nextRaceYear = activeSession?.year ?? new Date().getFullYear()
-  const { session: nextRaceSession, proximity: raceProximity } = useNextRace(nextRaceYear)
+  const { session: nextRaceSession } = useNextRace(nextRaceYear)
   const toasts = useAmbientStore((s) => s.toasts)
   const flagState = useAmbientStore((s) => s.flagState)
   const leaderColorMode = useAmbientStore((s) => s.leaderColorMode)
@@ -834,27 +775,12 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0]
   const [logOpen, setLogOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [sessionBrowserOpen, setSessionBrowserOpen] = useState(false)
   const [standingsOpen, setStandingsOpen] = useState(false)
   const [showLiveModePrompt, setShowLiveModePrompt] = useState(false)
   const [promptPresent, setPromptPresent] = useState(false)
   const [promptClosing, setPromptClosing] = useState(false)
-  const [promptMessage, setPromptMessage] = useState('')
-  const liveModePromptShownRef = useRef(false)
-  const shown60MinPromptRef = useRef(false)
-  const shown30MinPromptRef = useRef(false)
-  const prevNextRaceKeyRef = useRef<number | null>(null)
   const promptCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [now, setNow] = useState(() => Date.now())
 
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000)
-    return () => clearInterval(id)
-  }, [])
-
-  const liveMsToStart = nextRaceSession?.date_start
-    ? new Date(nextRaceSession.date_start).getTime() - now
-    : Infinity
   const logEntries = useLogStore((s) => s.entries)
   const hasErrors = logEntries.some((e) => e.level === 'ERR')
 
@@ -886,37 +812,34 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
     }
   }, [flagState, leaderColorMode, leaderColor, leaderDriverNumber, getDriver])
 
+  // Enable fake telemetry when entering demo mode; disable on unmount
+  useEffect(() => {
+    if (!demoMode) return
+    useFakeTelemetryStore.getState().enable()
+    return () => {
+      useFakeTelemetryStore.getState().disable()
+    }
+  }, [demoMode])
+
   useEffect(() => {
     const openSettings = () => setSettingsOpen(true)
-    const openSessionBrowser = () => setSessionBrowserOpen(true)
     const toggleLogPanel = () => setLogOpen((v) => !v)
     const triggerLiveModePrompt = () => setShowLiveModePrompt(true)
 
     window.addEventListener('pitwall-open-settings', openSettings)
-    window.addEventListener('pitwall-open-session-browser', openSessionBrowser)
     window.addEventListener('pitwall-toggle-log-panel', toggleLogPanel)
     window.addEventListener('pitwall-trigger-live-mode-prompt', triggerLiveModePrompt)
 
     return () => {
       window.removeEventListener('pitwall-open-settings', openSettings)
-      window.removeEventListener('pitwall-open-session-browser', openSessionBrowser)
       window.removeEventListener('pitwall-toggle-log-panel', toggleLogPanel)
       window.removeEventListener('pitwall-trigger-live-mode-prompt', triggerLiveModePrompt)
     }
   }, [])
 
-  // Auto-show once per page load when a race goes live while in historical mode
-  useEffect(() => {
-    if (mode !== 'historical') return
-    if (raceProximity !== 'live') return
-    if (liveModePromptShownRef.current) return
-    liveModePromptShownRef.current = true
-    setShowLiveModePrompt(true)
-  }, [mode, raceProximity])
-
   // Drive banner presence/exit animation from showLiveModePrompt
   useEffect(() => {
-    if (showLiveModePrompt && mode === 'historical') {
+    if (showLiveModePrompt) {
       if (promptCloseTimerRef.current) clearTimeout(promptCloseTimerRef.current)
       setPromptPresent(true)
       setPromptClosing(false)
@@ -928,7 +851,7 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
       }, 240)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showLiveModePrompt, mode])
+  }, [showLiveModePrompt])
 
   return (
     <div className="animated-fade" style={{
@@ -1078,79 +1001,24 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
               WebkitAppRegion: 'no-drag',
             }}
           >
-            {mode === 'live' ? (
-              /* Live mode: race title in center; archive hidden */
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{
-                    fontFamily: 'var(--cond)', fontSize: 15, fontWeight: 800,
-                    letterSpacing: '0.04em', color: 'var(--white)',
-                    textTransform: 'uppercase', lineHeight: 1,
-                  }}>
-                    {nextRaceSession?.circuit_short_name ?? nextRaceSession?.country_name ?? 'Live'}
-                  </span>
-                  {nextRaceSession?.session_name && (
-                    <span style={{
-                      fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '0.12em',
-                      textTransform: 'uppercase', color: 'var(--muted2)',
-                    }}>
-                      {nextRaceSession.session_name}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => setStandingsOpen(true)}
-                  className="interactive-button"
-                  title="2026 Championship Standings"
-                  style={{
-                    background: 'none',
-                    border: '0.5px solid var(--border)',
-                    borderRadius: 3,
-                    padding: '4px 10px',
-                    fontFamily: 'var(--mono)',
-                    fontSize: 8,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted)',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Standings
-                </button>
-              </>
-            ) : (
-              /* Historical mode: archive selector + standings */
-              <>
-                <div
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setSessionBrowserOpen(true)}
-                  className="interactive-chip"
-                >
-                  <SessionSelector />
-                </div>
-                <button
-                  onClick={() => setStandingsOpen(true)}
-                  className="interactive-button"
-                  title="2026 Championship Standings"
-                  style={{
-                    background: 'none',
-                    border: '0.5px solid var(--border)',
-                    borderRadius: 3,
-                    padding: '4px 10px',
-                    fontFamily: 'var(--mono)',
-                    fontSize: 8,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted)',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Standings
-                </button>
-              </>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontFamily: 'var(--cond)', fontSize: 15, fontWeight: 800,
+                letterSpacing: '0.04em', color: 'var(--white)',
+                textTransform: 'uppercase', lineHeight: 1,
+              }}>
+                {nextRaceSession?.circuit_short_name ?? nextRaceSession?.country_name ?? 'Live'}
+              </span>
+              {nextRaceSession?.session_name && (
+                <span style={{
+                  fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', color: 'var(--muted2)',
+                }}>
+                  {nextRaceSession.session_name}
+                </span>
+              )}
+            </div>
+            
           </div>
 
           <div
@@ -1163,60 +1031,30 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
               WebkitAppRegion: 'no-drag',
             }}
           >
-          {/* New window button — only shown when running inside Electron */}
-          {window.electronAPI && (
-            <button
-              onClick={() => window.electronAPI!.openNewWindow().catch(() => {})}
-              title="Open new window"
-              className="interactive-button"
-              style={{
-                background: 'none',
-                border: '0.5px solid var(--border)',
-                borderRadius: 3,
-                padding: '4px 10px',
-                fontFamily: 'var(--mono)',
-                fontSize: 8,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: 'var(--muted2)',
-                cursor: 'pointer',
-              }}
-            >
-              + Window
-            </button>
-          )}
+          
 
-          {/* Mode indicator — click to toggle between live and historical */}
+          {/* Back to season hub */}
           <button
-            onClick={() => setMode(mode === 'live' ? 'historical' : 'live')}
-            title={mode === 'live' ? 'Switch to historical mode' : 'Switch to live mode'}
+            onClick={() => {
+              if (demoMode) useFakeTelemetryStore.getState().disable()
+              setMode('hub')
+            }}
+            title="Back to season overview"
             className="interactive-button"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
               background: 'none',
-              border: `0.5px solid ${mode === 'live' ? 'rgba(232,19,43,0.35)' : 'var(--border)'}`,
+              border: '0.5px solid var(--border)',
               borderRadius: 3,
               padding: '4px 10px',
               fontFamily: 'var(--mono)',
               fontSize: 8,
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
-              color: mode === 'live' ? 'rgba(232,19,43,0.85)' : 'var(--muted2)',
+              color: 'var(--muted2)',
               cursor: 'pointer',
-              transition: 'color 0.3s ease, border-color 0.3s ease',
             }}
           >
-            <span style={{
-              width: 5,
-              height: 5,
-              borderRadius: '50%',
-              background: mode === 'live' ? 'var(--red)' : 'var(--muted2)',
-              flexShrink: 0,
-              transition: 'background 0.3s ease',
-            }} />
-            {mode === 'live' ? 'Live' : 'Hist'}
+            Season
           </button>
 
           {/* LOG button */}
@@ -1269,6 +1107,20 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
           <CanvasTabs />
         </div>
       </div>
+
+      {/* Demo mode banner */}
+      {demoMode && (
+        <div style={{
+          background: 'rgba(255,180,0,0.06)',
+          borderBottom: '0.5px solid rgba(255,180,0,0.2)',
+          padding: '5px 14px',
+          fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '0.12em',
+          textTransform: 'uppercase', color: 'rgba(255,180,0,0.6)',
+          textAlign: 'center', flexShrink: 0,
+        }}>
+          Demo mode — telemetry widgets show simulated data
+        </div>
+      )}
 
       {/* Live mode prompt banner */}
       {promptPresent && (
@@ -1353,9 +1205,6 @@ function MainLayout({ hideCanvasWidgetAdd }: { hideCanvasWidgetAdd: boolean }) {
 
       {/* Settings panel */}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
-
-      {/* Session browser */}
-      {sessionBrowserOpen && <SessionBrowserModal onClose={() => setSessionBrowserOpen(false)} />}
 
       {/* Season standings */}
       {standingsOpen && <SeasonStandingsModal onClose={() => setStandingsOpen(false)} />}
@@ -1470,7 +1319,7 @@ export default function App() {
     driversReady: startupProgress.driversReady,
   }
   const startupDataReady = mergedProgress.workspaceReady && mergedProgress.sessionReady && mergedProgress.driversReady
-  const shouldBlockStartup = mode !== 'onboarding' && !startupDataReady
+  const shouldBlockStartup = mode !== 'onboarding' && mode !== 'demo' && !startupDataReady
   const showStartupSplash = useStartupSplashVisibility(shouldBlockStartup)
   const effectiveOverlayProgress = loadingPreviewActive ? loadingPreviewProgress : mergedProgress
   const shouldShowLoadingOverlay = !isWidgetPopoutShell && (loadingPreviewActive || showStartupSplash)
@@ -1501,6 +1350,16 @@ export default function App() {
         </>
       ) : mode === 'onboarding' ? (
         <ApiKeyOnboarding />
+      ) : mode === 'hub' ? (
+        <>
+          <DataLayer onStartupProgressChange={setStartupProgress} />
+          <SeasonHub />
+        </>
+      ) : mode === 'demo' ? (
+        <>
+          <DataLayer onStartupProgressChange={setStartupProgress} />
+          <MainLayout hideCanvasWidgetAdd={false} demoMode />
+        </>
       ) : (
         <>
           <DataLayer onStartupProgressChange={setStartupProgress} />

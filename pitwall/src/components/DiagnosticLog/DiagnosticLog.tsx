@@ -295,7 +295,7 @@ function DevPanel() {
         }}>
           Mode
         </span>
-        {(['historical', 'live'] as const).map((m) => {
+        {(['hub', 'live'] as const).map((m) => {
           const active = mode === m
           const color = active ? 'var(--white)' : 'var(--muted2)'
           return (

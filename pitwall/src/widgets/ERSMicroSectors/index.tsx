@@ -1,4 +1,4 @@
-export const HELP = `# ERS Micro-Sectors
+﻿export const HELP = `# ERS Micro-Sectors
 
 Inferred ERS (energy recovery) deployment and harvesting split across 8 track micro-sectors, shown as a stacked bar chart.
 
@@ -12,7 +12,7 @@ Unfamiliar terms:
 - *ERS*: Energy Recovery System — captures kinetic energy under braking and heat from exhaust gases, storing it in a battery. That energy is then deployed as additional power on acceleration.
 - *Micro-sector*: A fine subdivision of a lap used for localized analysis, not the same as the official S1/S2/S3 split points.
 
-Notes: ERS deployment and harvesting are *inferred* from throttle and brake telemetry — OpenF1 does not expose actual ERS data. Treat this as an approximation, not a direct measurement. In live mode the most recent 40 samples are bucketed; in historical mode the last completed lap is used via FastF1.
+Notes: ERS deployment and harvesting are *inferred* from throttle and brake telemetry — treat this as an approximation, not a direct measurement. In live mode the most recent 40 samples are bucketed; in historical mode the last completed lap is used via FastF1.
 `
 import { useMemo } from 'react'
 import { useCarData } from '../../hooks/useCarData'
@@ -151,7 +151,7 @@ export function ERSMicroSectors({ widgetId }: { widgetId: string }) {
   )
 
   // Historical path
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -166,7 +166,7 @@ export function ERSMicroSectors({ widgetId }: { widgetId: string }) {
     lastLapNumber,
   )
 
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
 
   // Buckets: live uses rolling buffer, historical uses full telemetry lap
   const buckets = useMemo((): ErsBucket[] => {

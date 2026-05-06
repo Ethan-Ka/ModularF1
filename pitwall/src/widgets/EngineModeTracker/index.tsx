@@ -1,4 +1,4 @@
-export const HELP = `# Engine Mode Tracker
+﻿export const HELP = `# Engine Mode Tracker
 
 Infers the driver's current power unit deployment mode from throttle, RPM, and brake data, and shows a confidence histogram across recent samples.
 
@@ -117,7 +117,7 @@ export function EngineModeTracker({ widgetId }: { widgetId: string }) {
   )
 
   // Historical path
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -132,7 +132,7 @@ export function EngineModeTracker({ widgetId }: { widgetId: string }) {
     lastLapNumber,
   )
 
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
 
   const { currentMode, histogram, sampleCount } = useMemo((): {
     currentMode: EngineMode | null

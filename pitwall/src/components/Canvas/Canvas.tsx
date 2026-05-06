@@ -356,7 +356,13 @@ export function Canvas({ tabId, hideAddWidget = false }: CanvasProps) {
       <GridLayout
         layout={tab.layout as Layout}
         style={{ minHeight: '100%' }}
-        gridConfig={{ cols: GRID_COLS, rowHeight: GRID_ROW_HEIGHT, margin: [GRID_MARGIN_X, GRID_MARGIN_Y] as [number, number] }}
+        gridConfig={{
+          cols: GRID_COLS,
+          rowHeight: GRID_ROW_HEIGHT,
+          margin: [GRID_MARGIN_X, GRID_MARGIN_Y] as [number, number],
+          compactType: null,
+          preventCollision: false,
+        }}
         dragConfig={{ handle: '.widget-drag-handle' }}
         resizeConfig={{ handles: ['se'] }}
         dropConfig={{

@@ -1,52 +1,30 @@
 import { useMemo } from 'react'
-import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { fetchIntervals } from '../api/openf1'
+import type { UseQueryResult } from '@tanstack/react-query'
 import { useSessionStore } from '../store/sessionStore'
 import type { OpenF1Interval } from '../api/openf1'
-import { queryModePolicy } from './queryModePolicy'
-import { readSessionData, writeSessionData, isSessionDataComplete } from '../lib/f1PersistentStore'
+import { useFastF1Timing } from './useFastF1'
 
 export function useIntervalHistory(options?: { preload?: boolean }) {
-  const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
-  const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
   const mode = useSessionStore((s) => s.mode)
-  const liveRefetchInterval = options?.preload ? false : 8_000
+  const fastf1Ref = useSessionStore((s) => s.activeFastF1Session)
+  const fastf1Available = useSessionStore((s) => s.fastf1ServerAvailable)
 
-  return useQuery({
-    queryKey: ['intervals-history', sessionKey],
-    queryFn: async () => {
-      const key = sessionKey!
+  const usingFastF1 = fastf1Available && !!fastf1Ref
 
-      // For historical sessions, stored data is immutable — skip the network entirely
-      const complete = await isSessionDataComplete('intervals', key)
-      if (complete) {
-        const stored = await readSessionData<OpenF1Interval>('intervals', key)
-        if (stored.length > 0) return stored
-      }
+  const timingQuery = useFastF1Timing(usingFastF1 ? fastf1Ref : null, { live: mode === 'live' })
 
-      // For live sessions, read what we have as a fallback in case the API fails
-      const stored = complete ? [] : await readSessionData<OpenF1Interval>('intervals', key)
+  const data = timingQuery.data?.map((row) => ({
+    session_key: 0,
+    driver_number: row.driver_number,
+    gap_to_leader: row.gap_to_leader ?? 0,
+    interval: row.interval ?? 0,
+    date: row.date,
+  } satisfies OpenF1Interval))
 
-      try {
-        const all = await fetchIntervals(key, apiKey)
-
-        if (all.length === 0 && stored.length > 0) return stored
-
-        void writeSessionData('intervals', key, all, mode === 'historical')
-        return all
-      } catch (error) {
-        if (stored.length > 0) return stored
-        throw error
-      }
-    },
-    // Intervals are OpenF1-only — always fall back regardless of dataSource.
-    enabled: !!sessionKey,
-    ...queryModePolicy(mode, {
-      staleTime: 5_000,
-      refetchInterval: liveRefetchInterval,
-    }),
-    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
-  })
+  return {
+    ...timingQuery,
+    data,
+  }
 }
 
 export function useIntervals(options?: { preload?: boolean }) {

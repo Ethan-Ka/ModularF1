@@ -9,9 +9,9 @@ Detailed circuit diagram with a live track outline and driver position dots over
 Unfamiliar terms:
 
 - *Sector*: One of three official timing segments the lap is divided into for split time measurement (S1, S2, S3).
-- *Track position*: Mapped from raw x/y metric coordinates (OpenF1) through a shared normaliser that keeps positions consistent across all track map widgets.
+- *Track position*: Mapped from raw x/y metric coordinates (FastF1) through a shared normaliser that keeps positions consistent across all track map widgets.
 
-Notes: circuit map data is loaded from static circuit assets bundled with the app. If a circuit is not yet in the asset library, the widget will fall back to an empty state. Live driver positions require an active OpenF1 session.
+Notes: circuit map data is loaded from static circuit assets bundled with the app. If a circuit is not yet in the asset library, the widget will fall back to an empty state. Live driver positions require an active FastF1 session.
 `
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { useLaps } from '../../hooks/useLaps'

@@ -42,6 +42,7 @@ function buildStandings(
     return {
       driverNumber,
       driverId: ds.Driver.driverId,
+      constructorName: ds.Constructors[0]?.name ?? undefined,
       points: parseFloat(ds.points),
       wins: parseInt(ds.wins, 10),
       podiums,

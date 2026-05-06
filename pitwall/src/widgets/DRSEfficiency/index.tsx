@@ -1,4 +1,4 @@
-export const HELP = `# DRS Efficiency
+﻿export const HELP = `# DRS Efficiency
 
 Tracks DRS activation patterns and the speed gain attributed to having the rear wing open.
 
@@ -12,7 +12,7 @@ Unfamiliar terms:
 - *DRS*: Drag Reduction System — a movable element on the rear wing that flattens to reduce aerodynamic drag, typically adding 10–15 km/h on straights. Drivers can open DRS within designated zones when within 1 second of the car ahead (race) or freely in qualifying.
 - *DRS zone*: A designated straight section of the track where DRS may be activated.
 
-Notes: speed gain is inferred by comparing speed samples taken just before and after DRS activation — it is an approximation and may be affected by other factors (corner exits, wind, fuel load). In live mode data streams from OpenF1; historical mode requires the FastF1 sidecar.
+Notes: speed gain is inferred by comparing speed samples taken just before and after DRS activation — it is an approximation and may be affected by other factors (corner exits, wind, fuel load). Live and historical data are derived from FastF1 timing telemetry.
 `
 import { useMemo } from 'react'
 import { useCarData } from '../../hooks/useCarData'
@@ -137,7 +137,7 @@ export function DRSEfficiency({ widgetId }: { widgetId: string }) {
   )
 
   // Historical path
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -152,7 +152,7 @@ export function DRSEfficiency({ widgetId }: { widgetId: string }) {
     lastLapNumber,
   )
 
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
 
   const stats = useMemo((): DrsStats | null => {
     if (isHistorical) {

@@ -1,4 +1,4 @@
-export const HELP = `# Car Visualization
+﻿export const HELP = `# Car Visualization
 
 Displays a graphical side profile of the selected car, with live telemetry overlays.
 
@@ -112,11 +112,11 @@ export function CarVisualization({ widgetId }: { widgetId: string }) {
   const compoundAbbr = COMPOUND_ABBR[compound] ?? '?'
   const compoundName = compound || null
 
-  // Live path: OpenF1 car_data with incremental date_gt polling
+  // Live path: FastF1 telemetry latest sample
   const { data: liveData } = useCarData(mode === 'live' ? driverNumber : null)
 
   // Historical path: FastF1 telemetry for peak-speed sample of the last completed lap
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -157,7 +157,7 @@ export function CarVisualization({ widgetId }: { widgetId: string }) {
   }, [liveData])
 
   const currentSample = mode === 'live' ? liveSample : peakSample
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
   const refreshFade = useRefreshFade([liveData])
 
   // Persist the last known good sample so the car stays visible when

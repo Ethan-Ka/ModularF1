@@ -13,7 +13,7 @@ Unfamiliar terms:
 - *Position change*: A detected shift in race order. This can be caused by an on-track overtake, a pit stop sequence, a retirement, or a penalty.
 - *Gap*: The time difference to the car ahead at the moment of the position change, when available.
 
-Notes: position changes are inferred from OpenF1 position data deltas — they include pit-stop-induced swaps, not only on-track overtakes. Very rapid multi-car swaps (e.g., a safety car restart) may generate multiple entries at the same timestamp.
+Notes: position changes are inferred from timing data deltas — they include pit-stop-induced swaps, not only on-track overtakes. Very rapid multi-car swaps (e.g., a safety car restart) may generate multiple entries at the same timestamp.
 `
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { usePositions } from '../../hooks/usePositions'
@@ -206,7 +206,7 @@ function OvertakeRow({
 }
 
 export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
-  const dataSource = useSessionStore((s) => s.dataSource)
+  const mode = useSessionStore((s) => s.mode)
   const activeFastF1Session = useSessionStore((s) => s.activeFastF1Session)
 
   const { data: positions } = usePositions()
@@ -215,7 +215,7 @@ export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
   useIntervalHistory()
 
   const { data: fastF1Results } = useFastF1Results(
-    dataSource === 'fastf1' ? activeFastF1Session : null,
+    mode === 'hub' ? activeFastF1Session : null,
   )
 
   const getDriver = useDriverStore((s) => s.getDriver)
@@ -228,7 +228,7 @@ export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
   useEffect(() => {
     // In FastF1 mode positions are static final results — diffing would produce
     // spurious overtake events when the snapshot first loads from an empty map.
-    if (dataSource === 'fastf1') return
+    if (mode === 'hub') return
     if (!positions?.length) return
 
     const current = new Map(positions.map((p) => [p.driver_number, p.position]))
@@ -263,13 +263,13 @@ export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
     }
 
     prevPositionsRef.current = current
-  }, [positions, dataSource])
+  }, [positions, mode])
 
   // Stable driver lookups derived from current overtakes list
   const rows = useMemo(() => overtakes, [overtakes])
 
   // FastF1 mode: show grid → finish position change table
-  if (dataSource === 'fastf1') {
+  if (mode === 'hub') {
     const gridRows = (fastF1Results ?? [])
       .filter((r) => r.Position != null && r.GridPosition != null)
       .sort((a, b) => (a.Position ?? 99) - (b.Position ?? 99))

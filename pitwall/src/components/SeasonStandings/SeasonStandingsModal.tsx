@@ -8,6 +8,13 @@ interface SeasonStandingsModalProps {
   onClose: () => void
 }
 
+interface SeasonStandingsPanelProps {
+  variant?: 'modal' | 'inline'
+  onRequestClose?: () => void
+  showCloseButton?: boolean
+  panelClassName?: string
+}
+
 function positionAccentColor(pos: number): string {
   if (pos === 1) return '#C9A84C'
   if (pos === 2) return '#9EA3A8'
@@ -359,7 +366,6 @@ function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerInd
 interface ConstructorRowProps {
   teamName: string
   teamColor: string
-  teamLogo: string | null
   points: number
   wins: number
   podiums: number
@@ -371,7 +377,6 @@ interface ConstructorRowProps {
 function ConstructorRow({
   teamName,
   teamColor,
-  teamLogo,
   points,
   wins,
   podiums,
@@ -421,23 +426,6 @@ function ConstructorRow({
         />
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {teamLogo && (
-              <img
-                src={teamLogo}
-                alt={teamName}
-                style={{
-                  height: 14,
-                  width: 'auto',
-                  maxWidth: 28,
-                  objectFit: 'contain',
-                  opacity: 0.85,
-                  flexShrink: 0,
-                }}
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
-            )}
             <span
               style={{
                 fontFamily: 'var(--cond)',
@@ -501,31 +489,16 @@ function ConstructorRow({
   )
 }
 
-export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
-  const EXIT_MS = 220
-  const [isClosing, setIsClosing] = useState(false)
+export function SeasonStandingsPanel({
+  variant = 'inline',
+  onRequestClose,
+  showCloseButton = false,
+  panelClassName,
+}: SeasonStandingsPanelProps) {
   const [profileDriverNumber, setProfileDriverNumber] = useState<number | null>(null)
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { standings, isLoading, isRefreshing, raceCount, loadedCount, totalFetchSteps } = useSeasonStandings(2026)
-  const { getDriver, getTeamColor, getTeamLogo } = useDriverStore()
-
-  function handleRequestClose() {
-    if (isClosing) return
-    setIsClosing(true)
-    closeTimerRef.current = setTimeout(onClose, EXIT_MS)
-  }
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleRequestClose()
-    }
-    window.addEventListener('keydown', handler)
-    return () => {
-      window.removeEventListener('keydown', handler)
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
-    }
-  }, [])
+  const { getDriver, getTeamColor } = useDriverStore()
 
   const maxDriverPoints = standings?.[0]?.points ?? 1
 
@@ -538,7 +511,6 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
       {
         teamName: string
         teamColor: string
-        teamLogo: string | null
         points: number
         wins: number
         podiums: number
@@ -547,13 +519,12 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
 
     for (const d of standings) {
       const driver = getDriver(d.driverNumber)
-      const teamName = driver?.team_name ?? 'Unknown'
+      const teamName = d.constructorName ?? driver?.team_name ?? 'Unknown'
       const existing = teamMap.get(teamName)
       if (!existing) {
         teamMap.set(teamName, {
           teamName,
           teamColor: getTeamColor(d.driverNumber),
-          teamLogo: getTeamLogo(d.driverNumber),
           points: d.points,
           wins: d.wins,
           podiums: d.podiums,
@@ -569,7 +540,7 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
     }
 
     return Array.from(teamMap.values()).sort((a, b) => b.points - a.points)
-  }, [standings, getDriver, getTeamColor, getTeamLogo])
+  }, [standings, getDriver, getTeamColor])
 
   const maxConstructorPoints = constructorStandings[0]?.points ?? 1
 
@@ -580,36 +551,24 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
 
   const loadProgress = Math.round((loadedCount / totalFetchSteps) * 100)
 
-  const modal = createPortal(
-    <div
-      onClick={handleRequestClose}
-      className={isClosing ? 'glass-overlay glass-overlay-exit' : 'glass-overlay'}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.72)',
-        zIndex: 200,
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        paddingTop: 60,
-        paddingBottom: 60,
-      }}
-    >
+  const panelStyle: React.CSSProperties = {
+    width: variant === 'modal' ? 'min(1040px, calc(100vw - 80px))' : '100%',
+    maxHeight: variant === 'modal' ? 'calc(100vh - 120px)' : 'none',
+    background: 'var(--bg3)',
+    border: '0.5px solid var(--border2)',
+    borderRadius: 8,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    boxShadow: `0 0 60px ${leaderColor}18, 0 24px 48px rgba(0,0,0,0.6)`,
+  }
+
+  return (
+    <>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className={isClosing ? 'modal-panel modal-panel-exit' : 'modal-panel'}
-        style={{
-          width: 'min(1040px, calc(100vw - 80px))',
-          maxHeight: 'calc(100vh - 120px)',
-          background: 'var(--bg3)',
-          border: '0.5px solid var(--border2)',
-          borderRadius: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          boxShadow: `0 0 60px ${leaderColor}18, 0 24px 48px rgba(0,0,0,0.6)`,
-        }}
+        onClick={variant === 'modal' ? (e) => e.stopPropagation() : undefined}
+        className={panelClassName}
+        style={panelStyle}
       >
         {/* Header */}
         <div
@@ -695,24 +654,25 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
           )}
 
           <div style={{ flex: 1 }} />
-
-          <button
-            onClick={handleRequestClose}
-            className="interactive-button"
-            style={{
-              background: 'none',
-              border: '0.5px solid var(--border)',
-              borderRadius: 3,
-              padding: '4px 10px',
-              fontFamily: 'var(--mono)',
-              fontSize: 8,
-              letterSpacing: '0.12em',
-              color: 'var(--muted2)',
-              cursor: 'pointer',
-            }}
-          >
-            ESC
-          </button>
+          {showCloseButton && onRequestClose && (
+            <button
+              onClick={onRequestClose}
+              className="interactive-button"
+              style={{
+                background: 'none',
+                border: '0.5px solid var(--border)',
+                borderRadius: 3,
+                padding: '4px 10px',
+                fontFamily: 'var(--mono)',
+                fontSize: 8,
+                letterSpacing: '0.12em',
+                color: 'var(--muted2)',
+                cursor: 'pointer',
+              }}
+            >
+              ESC
+            </button>
+          )}
         </div>
 
         {/* Loading state */}
@@ -886,7 +846,6 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
                     rank={i + 1}
                     teamName={team.teamName}
                     teamColor={team.teamColor}
-                    teamLogo={team.teamLogo}
                     points={team.points}
                     wins={team.wins}
                     podiums={team.podiums}
@@ -899,13 +858,6 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
           </div>
         )}
       </div>
-    </div>,
-    document.body
-  )
-
-  return (
-    <>
-      {modal}
       {profileDriverNumber !== null && (
         <DriverProfileModal
           driverNumber={profileDriverNumber}
@@ -914,4 +866,55 @@ export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
       )}
     </>
   )
+}
+
+export function SeasonStandingsModal({ onClose }: SeasonStandingsModalProps) {
+  const EXIT_MS = 220
+  const [isClosing, setIsClosing] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleRequestClose() {
+    if (isClosing) return
+    setIsClosing(true)
+    closeTimerRef.current = setTimeout(onClose, EXIT_MS)
+  }
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleRequestClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => {
+      window.removeEventListener('keydown', handler)
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
+
+  const modal = createPortal(
+    <div
+      onClick={handleRequestClose}
+      className={isClosing ? 'glass-overlay glass-overlay-exit' : 'glass-overlay'}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.72)',
+        zIndex: 200,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: 60,
+        paddingBottom: 60,
+      }}
+    >
+      <SeasonStandingsPanel
+        variant="modal"
+        onRequestClose={handleRequestClose}
+        showCloseButton
+        panelClassName={isClosing ? 'modal-panel modal-panel-exit' : 'modal-panel'}
+      />
+    </div>,
+    document.body
+  )
+
+  return modal
 }

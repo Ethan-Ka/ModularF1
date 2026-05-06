@@ -1,7 +1,19 @@
 
 # Urgent To Do 
 
-Also fix the multiple window system
+- [ ] Fix season standings thing/data
+  - [ ] Constructors is fixed when I load live modes and open the standings popup
+- [ ] Fix season roadmap 
+  - [ ] Add clickable data about each race
+- [ ] Fix demo mode track map
+- [ ] make logging log errors from console
+- [ ] Update settings
+- [ ] Make configuring canvas clearer
+- [ ] add legend for races back to the bottom of the reason roadmap
+- [ ] make bbc not the only F1 source - ADD OFFICIAL FIA AND F1 ANNOUNCEMENTS
+- [ ] Add timezone to next race time display
+- [ ] add a bunch of stuff to the loading sequence
+- [ ] 
 
 FIX THE SECTOR MAP AND TRACK MAP
 
@@ -15,45 +27,10 @@ Test all items in a live setting
 
 # Test Run - Miami 5/3/26 - Bugs
 
-FASTF1 DATA IS FULLY NON FUNCTIONAL
-LIVE MODE SUCKS AHHHHHHH
-
-It is constabntly pinging health, but not actually fetching any data, or requesting any sessions.
-
 Sessions are not retrieved as well. It can be allowed to not do any OpenF1 requests in FastF1 live mode(it can be used for historical) until we need to request OpenF1 session data to start requesting it from FastF1.
 
-FastF1 data appears to be requested, but it could be wrong. There also should be a centralized place for all FastF1 requests(an API query file)
-
-One of the problems is that 
-```
-[0] [FastF1] INFO:     127.0.0.1:55541 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:56094 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:64795 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:58831 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:56749 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:54458 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:61187 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:52433 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:65247 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:50668 - "GET /health HTTP/1.1" 200 OK
-[0] [FastF1] INFO:     127.0.0.1:56870 - "GET /health HTTP/1.1" 200 OK
-```
-
-Every minute or so, the app session fully reloads, this needs to be fixed.
-
-
-
-
-LiveLapTimeCard is displaying a ridiculously large number when the race hasn't started, and is on OpenF1 with no premium. Fix: Verify that OpenF1 is authenticated in live mode, and make the setting that chooses between OpenF1 and FastF1 Persistent
-
-Make sure widgets react to waiting for the race start - they show placeholder dadta which is fine for car widget but not for enginemode tracker
-
-When moving cards around, the automatic layout adjustment is too quick and too large. Widgets shoot to the bottom of the screen and stay there which is annoying
 
 Widgets needs to be smaller lol
-
-Hitting OpenF1 rate limit when fastf1 is selected - this should not happen for a live session with no OpenF1 sub
-
 
 Make global widgets - race control, radio , LapDelta, strategy timelines not driver focusable
 
@@ -65,6 +42,8 @@ P1 and a driver should not be able to be selected at the same time
 
 # To Do
 
+- [ ] fix popout widgets sync
+- [ ] Fix season standings thing/data
 - [ ] add a widget for individual driver radio?
 - [x] Implement data from [f1db](https://github.com/f1db/f1db/) (give credit)
 - [x] Implement widgets

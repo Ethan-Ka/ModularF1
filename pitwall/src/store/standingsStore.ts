@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 export interface DriverSeasonStanding {
   driverNumber: number
   driverId?: string
+  constructorName?: string
   points: number
   wins: number
   podiums: number

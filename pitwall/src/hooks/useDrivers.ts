@@ -1,44 +1,36 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchDrivers } from '../api/openf1'
-import { useSessionStore } from '../store/sessionStore'
+﻿import { useSessionStore } from '../store/sessionStore'
 import { useDriverStore } from '../store/driverStore'
 import { useEffect } from 'react'
-import { queryModePolicy } from './queryModePolicy'
-import { readSessionData, writeSessionData, isSessionDataComplete } from '../lib/f1PersistentStore'
 import type { OpenF1Driver } from '../api/openf1'
+import { useFastF1Drivers } from './useFastF1'
+import type { FastF1Driver } from '../api/fastf1Bridge'
+
+function normalizeFastF1Driver(driver: FastF1Driver): OpenF1Driver {
+  const teamColor = driver.team_colour?.replace('#', '') ?? '6B6B70'
+  const fullName = driver.full_name ?? driver.name_acronym ?? ''
+  return {
+    driver_number: driver.driver_number,
+    name_acronym: driver.name_acronym ?? String(driver.driver_number),
+    full_name: fullName,
+    team_name: driver.team_name ?? 'Unknown',
+    team_colour: teamColor,
+    session_key: 0,
+  }
+}
 
 export function useDrivers() {
-  const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
-  const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
   const sessionYear = useSessionStore((s) => s.activeSession?.year ?? null)
-  const mode = useSessionStore((s) => s.mode)
+  const fastf1Ref = useSessionStore((s) => s.activeFastF1Session)
+  const fastf1Available = useSessionStore((s) => s.fastf1ServerAvailable)
   const setDrivers = useDriverStore((s) => s.setDrivers)
   const applySeasonVisualsFromPublic = useDriverStore((s) => s.applySeasonVisualsFromPublic)
 
-  const query = useQuery({
-    queryKey: ['drivers', sessionKey],
-    queryFn: async () => {
-      const key = sessionKey!
-      const complete = await isSessionDataComplete('drivers', key)
-      if (complete) {
-        const stored = await readSessionData<OpenF1Driver>('drivers', key)
-        if (stored.length > 0) return stored
-      }
-      const data = await fetchDrivers(key, apiKey)
-      void writeSessionData('drivers', key, data, mode === 'historical')
-      return data
-    },
-    enabled: !!sessionKey,
-    ...queryModePolicy(mode, {
-      staleTime: Infinity,
-      refetchInterval: false,
-    }),
-    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
-  })
+  const query = useFastF1Drivers(fastf1Available && fastf1Ref ? fastf1Ref : null)
 
   useEffect(() => {
     if (query.data) {
-      setDrivers(query.data, { seasonYear: sessionYear })
+      const normalized = query.data.map(normalizeFastF1Driver)
+      setDrivers(normalized, { seasonYear: sessionYear })
 
       if (sessionYear != null) {
         void applySeasonVisualsFromPublic(sessionYear).catch(() => {

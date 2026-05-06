@@ -11,6 +11,10 @@ import {
   fetchFastF1Results,
   fetchFastF1Stints,
   fetchFastF1Telemetry,
+  fetchFastF1TelemetryLatest,
+  fetchFastF1Timing,
+  fetchFastF1Drivers,
+  fetchFastF1Locations,
   fetchFastF1Weather,
   type FastF1SessionRef,
 } from '../api/fastf1Bridge'
@@ -80,6 +84,18 @@ export function useFastF1Telemetry(ref?: FastF1SessionRef | null, driver?: strin
   })
 }
 
+export function useFastF1TelemetryLatest(ref?: FastF1SessionRef | null, driverNumber?: number) {
+  const available = useSessionStore((s) => s.fastf1ServerAvailable)
+
+  return useQuery({
+    queryKey: ['fastf1', 'telemetry-latest', ref?.year, ref?.round, ref?.session, driverNumber],
+    queryFn: () => fetchFastF1TelemetryLatest(ref!, driverNumber!),
+    enabled: !!ref && !!driverNumber && available,
+    staleTime: 2_000,
+    refetchInterval: 2_000,
+  })
+}
+
 export function useFastF1Stints(ref?: FastF1SessionRef | null) {
   const available = useSessionStore((s) => s.fastf1ServerAvailable)
 
@@ -121,5 +137,44 @@ export function useFastF1Results(ref?: FastF1SessionRef | null) {
     queryFn: () => fetchFastF1Results(ref!),
     enabled: !!ref && available,
     ...HISTORICAL_OPTS,
+  })
+}
+
+export function useFastF1Drivers(ref?: FastF1SessionRef | null) {
+  const available = useSessionStore((s) => s.fastf1ServerAvailable)
+
+  return useQuery({
+    queryKey: ['fastf1', 'drivers', ref?.year, ref?.round, ref?.session],
+    queryFn: () => fetchFastF1Drivers(ref!),
+    enabled: !!ref && available,
+    ...HISTORICAL_OPTS,
+  })
+}
+
+export function useFastF1Timing(ref?: FastF1SessionRef | null, options?: { live?: boolean }) {
+  const available = useSessionStore((s) => s.fastf1ServerAvailable)
+  const isLive = options?.live === true
+
+  return useQuery({
+    queryKey: ['fastf1', 'timing', ref?.year, ref?.round, ref?.session, isLive ? 'live' : 'hist'],
+    queryFn: () => fetchFastF1Timing(ref!),
+    enabled: !!ref && available,
+    staleTime: isLive ? 2_000 : Infinity,
+    refetchInterval: isLive ? 2_000 : false,
+    gcTime: isLive ? GC_24H : GC_24H,
+  })
+}
+
+export function useFastF1Locations(ref?: FastF1SessionRef | null, options?: { live?: boolean }) {
+  const available = useSessionStore((s) => s.fastf1ServerAvailable)
+  const isLive = options?.live === true
+
+  return useQuery({
+    queryKey: ['fastf1', 'locations', ref?.year, ref?.round, ref?.session, isLive ? 'live' : 'hist'],
+    queryFn: () => fetchFastF1Locations(ref!),
+    enabled: !!ref && available,
+    staleTime: isLive ? 2_000 : Infinity,
+    refetchInterval: isLive ? 2_000 : false,
+    gcTime: GC_24H,
   })
 }

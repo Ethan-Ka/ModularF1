@@ -122,10 +122,10 @@ function runDebugAction(action: string, payload?: unknown) {
       ambient.addToast('Mode switched to live.', 'GREEN')
       log.addEntry('DBG', 'Switched mode to live from Developer Menu.', 'devtools')
       break
-    case 'set-mode-historical':
-      session.setMode('historical')
-      ambient.addToast('Mode switched to historical.', 'YELLOW')
-      log.addEntry('DBG', 'Switched mode to historical from Developer Menu.', 'devtools')
+    case 'set-mode-hub':
+      session.setMode('hub')
+      ambient.addToast('Mode switched to hub.', 'YELLOW')
+      log.addEntry('DBG', 'Switched mode to hub from Developer Menu.', 'devtools')
       break
     case 'toggle-api-requests': {
       const nextEnabled = !session.apiRequestsEnabled

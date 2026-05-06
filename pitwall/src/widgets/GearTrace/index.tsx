@@ -1,4 +1,4 @@
-export const HELP = `# Gear Trace
+﻿export const HELP = `# Gear Trace
 
 Step-function chart of gear selection over time for the selected driver.
 
@@ -11,7 +11,7 @@ Unfamiliar terms:
 - *Step function*: A line that changes only in discrete vertical jumps, matching the discrete nature of gear changes.
 - *Upshift / Downshift*: Moving to a higher or lower gear. High upshift density = approaching the rev limiter. Heavy downshifting = approaching a braking zone.
 
-Notes: in live mode data streams from OpenF1 car_data. In historical mode the last completed lap is shown via the FastF1 sidecar. Gear 0 (neutral) briefly appears during pit stops and at race start.
+Notes: in live mode samples are derived from FastF1 timing telemetry. In historical mode the last completed lap is shown via the FastF1 sidecar. Gear 0 (neutral) briefly appears during pit stops and at race start.
 `
 import { useMemo } from 'react'
 import { useCarData } from '../../hooks/useCarData'
@@ -92,7 +92,7 @@ export function GearTrace({ widgetId }: { widgetId: string }) {
   )
 
   // --- Historical path ---
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -107,7 +107,7 @@ export function GearTrace({ widgetId }: { widgetId: string }) {
     lastLapNumber,
   )
 
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
 
   // Resolve the gear sequence to render
   const gears = useMemo((): number[] => {

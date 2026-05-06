@@ -68,11 +68,18 @@ export function LiveLapTimeCard({ widgetId }: LiveLapTimeCardProps) {
   const resolvedLiveLapStartMs =
     webhookLapStartMs != null ? webhookLapStartMs : activeLapStartFromApiMs
 
+  const liveLapElapsedMs =
+    resolvedLiveLapStartMs != null ? nowMs - resolvedLiveLapStartMs : null
+  const MAX_LIVE_LAP_MS = 10 * 60 * 1000
+
   const isLiveLapRunning =
     mode === 'live' &&
     activeLap != null &&
+    activeLap.lap_number > 0 &&
     activeLap.lap_duration == null &&
-    resolvedLiveLapStartMs != null
+    liveLapElapsedMs != null &&
+    liveLapElapsedMs >= 0 &&
+    liveLapElapsedMs <= MAX_LIVE_LAP_MS
 
   useEffect(() => {
     setWebhookLapStartMs(null)
@@ -114,12 +121,14 @@ export function LiveLapTimeCard({ widgetId }: LiveLapTimeCardProps) {
   const driver = getDriver(driverNumber)
   const teamColor = getTeamColor(driverNumber)
 
-  if (timedLaps.length === 0 && !isLiveLapRunning) {
+  const showZeroLap = mode === 'live' && timedLaps.length === 0 && !isLiveLapRunning
+
+  if (timedLaps.length === 0 && !isLiveLapRunning && !showZeroLap) {
     return <EmptyState message="No lap timings yet" subMessage="Waiting for a completed lap." />
   }
 
   const liveLapDurationSeconds = isLiveLapRunning
-    ? Math.max(0, (nowMs - resolvedLiveLapStartMs!) / 1000)
+    ? Math.max(0, liveLapElapsedMs! / 1000)
     : null
 
   const latestLap = timedLaps[0] ?? null
@@ -139,11 +148,13 @@ export function LiveLapTimeCard({ widgetId }: LiveLapTimeCardProps) {
 
   const headerLabel = isLiveLapRunning
     ? `Live lap (L${activeLap!.lap_number})`
-    : latestLap
-      ? `Last lap (L${latestLap.lap_number})`
-      : 'Lap time'
+    : showZeroLap
+      ? 'Waiting for start'
+      : latestLap
+        ? `Last lap (L${latestLap.lap_number})`
+        : 'Lap time'
 
-  const heroValue = isLiveLapRunning ? liveLapDurationSeconds : lastLap
+  const heroValue = isLiveLapRunning ? liveLapDurationSeconds : showZeroLap ? 0 : lastLap
   const heroColor = isLiveLapRunning ? teamColor : isLapPb ? 'var(--green)' : 'var(--white)'
 
   return (

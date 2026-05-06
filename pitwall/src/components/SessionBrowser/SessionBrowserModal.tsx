@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useSessions, useFastF1Sessions, type FastF1SessionRow } from '../../hooks/useSession'
+import { useFastF1Sessions, type FastF1SessionRow } from '../../hooks/useSession'
 import { useSessionStore } from '../../store/sessionStore'
 import type { OpenF1Session } from '../../api/openf1'
 
@@ -9,6 +9,34 @@ interface SessionBrowserModalProps {
 }
 
 const YEARS = [2023, 2024, 2025, 2026]
+
+const SESSION_ORDER: Record<string, number> = {
+  FP1: 1,
+  FP2: 2,
+  FP3: 3,
+  SQ: 4,
+  S: 5,
+  Q: 6,
+  R: 7,
+}
+
+function sessionKeyFromRef(row: FastF1SessionRow): number {
+  const order = SESSION_ORDER[row.ref.session] ?? 9
+  return row.ref.year * 10000 + row.ref.round * 10 + order
+}
+
+function synthSessionFromRow(row: FastF1SessionRow): OpenF1Session {
+  return {
+    session_key: sessionKeyFromRef(row),
+    session_type: row.session_name,
+    session_name: row.session_name,
+    circuit_short_name: row.circuit_name,
+    date_start: row.date ?? '',
+    date_end: row.date ?? '',
+    year: row.ref.year,
+    country_name: row.country,
+  }
+}
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -178,17 +206,11 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
   const [isClosing, setIsClosing] = useState(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const dataSource = useSessionStore((s) => s.dataSource)
   const setActiveSession = useSessionStore((s) => s.setActiveSession)
   const setActiveFastF1Session = useSessionStore((s) => s.setActiveFastF1Session)
   const setMode = useSessionStore((s) => s.setMode)
 
-  const { data: openf1Sessions, isLoading: openf1Loading } = useSessions(selectedYear)
-  const { data: fastf1Sessions, isLoading: fastf1Loading } = useFastF1Sessions(
-    dataSource === 'fastf1' ? selectedYear : undefined
-  )
-
-  const isLoading = dataSource === 'fastf1' ? fastf1Loading : openf1Loading
+  const { data: fastf1Sessions, isLoading } = useFastF1Sessions(selectedYear)
 
   function handleRequestClose() {
     if (isClosing) return
@@ -204,21 +226,17 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
     }
   }, [])
 
-  function handleSelectOpenF1(session: OpenF1Session) {
-    setActiveSession(session)
-    handleRequestClose()
-  }
-
   function handleSelectFastF1(row: FastF1SessionRow) {
     setActiveFastF1Session(row.ref)
-    setMode('historical')
+    setActiveSession(synthSessionFromRow(row))
+    setMode('hub')
     handleRequestClose()
   }
 
   // Build grouped map from whichever source is active
   const grouped: Map<string, CircuitGroupRow[]> = new Map()
 
-  if (dataSource === 'fastf1' && fastf1Sessions) {
+  if (fastf1Sessions) {
     for (const row of fastf1Sessions) {
       const key = row.circuit_name
       if (!grouped.has(key)) grouped.set(key, [])
@@ -230,30 +248,13 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
         onSelect: () => handleSelectFastF1(row),
       })
     }
-  } else if (openf1Sessions) {
-    for (const s of openf1Sessions) {
-      const key = s.circuit_short_name ?? 'Unknown'
-      if (!grouped.has(key)) grouped.set(key, [])
-      grouped.get(key)!.push({
-        key: String(s.session_key),
-        name: s.session_name,
-        type: s.session_type,
-        date: s.date_start,
-        onSelect: () => handleSelectOpenF1(s),
-      })
-    }
   }
 
   // Country label per group
   const groupCountry: Map<string, string | undefined> = new Map()
-  if (dataSource === 'fastf1' && fastf1Sessions) {
+  if (fastf1Sessions) {
     for (const row of fastf1Sessions) {
       if (!groupCountry.has(row.circuit_name)) groupCountry.set(row.circuit_name, row.country)
-    }
-  } else if (openf1Sessions) {
-    for (const s of openf1Sessions) {
-      const key = s.circuit_short_name ?? 'Unknown'
-      if (!groupCountry.has(key)) groupCountry.set(key, s.country_name)
     }
   }
 

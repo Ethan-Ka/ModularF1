@@ -1,4 +1,4 @@
-export const HELP = `# Throttle / Brake Trace
+﻿export const HELP = `# Throttle / Brake Trace
 
 Dual-line chart of pedal inputs over time for the selected driver — useful for understanding driving style and corner technique.
 
@@ -85,7 +85,7 @@ export function ThrottleBrakeTrace({ widgetId }: { widgetId: string }) {
   )
 
   // --- Historical path ---
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -100,7 +100,7 @@ export function ThrottleBrakeTrace({ widgetId }: { widgetId: string }) {
     lastLapNumber,
   )
 
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
 
   // Build the sample array for whichever mode is active
   const samples = useMemo((): TraceSample[] => {

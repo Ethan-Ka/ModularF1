@@ -14,7 +14,7 @@ Unfamiliar terms:
 - *DRS enabled / disabled*: Race control authorisation to open or close DRS zones, typically after a SC period ends.
 - *Double yellow*: A caution requiring drivers to slow significantly — danger on track, be ready to stop.
 
-Notes: messages arrive in real time from OpenF1. The feed auto-scrolls to the most recent entry.
+Notes: messages arrive in real time from FastF1 timing data. The feed auto-scrolls to the most recent entry.
 `
 import { useRaceControl } from '../../hooks/useRaceControl'
 import type { OpenF1RaceControl } from '../../api/openf1'
