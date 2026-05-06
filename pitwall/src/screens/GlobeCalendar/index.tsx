@@ -510,7 +510,7 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
                     src={trackSvgUrl}
                     alt={w.circuitShort}
                     style={{ width: 130, height: 'auto', maxHeight: 110, objectFit: 'contain',
-                             filter: 'invert(1) brightness(0.85)' }}
+                             filter: 'brightness(0) invert(1)' }}
                   />
                 </div>
               )}
