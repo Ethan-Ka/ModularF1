@@ -20,7 +20,8 @@ import { TopChromeSharedGradientLayer } from './components/AmbientBar/TopChromeS
 import { TopChromeWaveLayer } from './components/AmbientBar/TopChromeWaveLayer'
 import { FLAG_COLORS } from './components/AmbientBar/flagStateMachine'
 import { useDrivers } from './hooks/useDrivers'
-import { useLatestSession } from './hooks/useSession'
+import { useSeasonStandings } from './hooks/useSeasonStandings'
+import { useLatestSession, useSessions } from './hooks/useSession'
 import { useAutoFastF1Session } from './hooks/useAutoFastF1Session'
 import { useFastF1ServerStatus } from './hooks/useFastF1'
 import { useNextRace } from './hooks/useNextRace'
@@ -48,6 +49,8 @@ interface StartupProgressState {
   workspaceReady: boolean
   sessionReady: boolean
   driversReady: boolean
+  standingsReady: boolean
+  calendarReady: boolean
 }
 
 function isWidgetPopoutWindow(): boolean {
@@ -66,6 +69,8 @@ function makeEmptyStartupProgress(): StartupProgressState {
     workspaceReady: false,
     sessionReady: false,
     driversReady: false,
+    standingsReady: false,
+    calendarReady: false,
   }
 }
 
@@ -180,6 +185,8 @@ function StartupLoadingScreen({ progress, visible }: { progress: StartupProgress
   const items = [
     { label: 'Loading session', ready: progress.sessionReady },
     { label: 'Loading driver data', ready: progress.driversReady },
+    { label: 'Loading standings', ready: progress.standingsReady },
+    { label: 'Loading calendar data', ready: progress.calendarReady },
     { label: 'Loading workspace state', ready: progress.workspaceReady },
   ]
   const readyCount = items.filter((item) => item.ready).length
@@ -340,10 +347,13 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
   const latestSessionQuery = useLatestSession()
   const latestSession = latestSessionQuery.data
   const { activeSession, setActiveSession, mode, setMode, apiKey, apiRequestsEnabled } = useSessionStore()
+  const standingsYear = activeSession?.year ?? new Date().getFullYear()
+  const standingsQuery = useSeasonStandings(standingsYear)
 
   // Race proximity for pre-race ambient state — uses the same year as the active session
   const nextRaceYear = activeSession?.year ?? new Date().getFullYear()
   const { proximity: raceProximity, session: nextRaceSession } = useNextRace(nextRaceYear)
+  const calendarQuery = useSessions(nextRaceYear)
 
   // Credential gating: advance out of onboarding, never force back into it.
   useEffect(() => {
@@ -459,11 +469,23 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
       || seasonBootstrapDone
       || driversQuery.isSuccess
       || driversQuery.isError
+    const standingsReady =
+      mode === 'onboarding'
+      || !apiRequestsEnabled
+      || !!standingsQuery.standings
+      || !standingsQuery.isLoading
+    const calendarReady =
+      mode === 'onboarding'
+      || !apiRequestsEnabled
+      || !!calendarQuery.data
+      || !calendarQuery.isLoading
 
     onStartupProgressChange({
       workspaceReady: true,
       sessionReady,
       driversReady,
+      standingsReady,
+      calendarReady,
     })
   }, [
     onStartupProgressChange,
@@ -476,6 +498,10 @@ function DataLayer({ onStartupProgressChange }: DataLayerProps) {
     driversQuery.isSuccess,
     driversQuery.isError,
     seasonBootstrapDone,
+    standingsQuery.standings,
+    standingsQuery.isLoading,
+    calendarQuery.data,
+    calendarQuery.isLoading,
   ])
 
   return null
@@ -1239,7 +1265,7 @@ export default function App() {
 
   useEffect(() => {
     if (mode === 'onboarding') {
-      setStartupProgress({ workspaceReady: true, sessionReady: true, driversReady: true })
+      setStartupProgress({ workspaceReady: true, sessionReady: true, driversReady: true, standingsReady: true, calendarReady: true })
       return
     }
 
@@ -1248,7 +1274,7 @@ export default function App() {
     // genuinely isn't available (e.g., onboarding → live transition).
     setStartupProgress((prev) => {
       if (prev.sessionReady && prev.driversReady) return prev
-      return { ...prev, sessionReady: false, driversReady: false }
+      return { ...prev, sessionReady: false, driversReady: false, standingsReady: false, calendarReady: false }
     })
   }, [mode])
 
@@ -1285,7 +1311,7 @@ export default function App() {
     }
 
     const onFinish = () => {
-      setLoadingPreviewProgress({ workspaceReady: true, sessionReady: true, driversReady: true })
+      setLoadingPreviewProgress({ workspaceReady: true, sessionReady: true, driversReady: true, standingsReady: true, calendarReady: true })
       if (finishTimer) {
         clearTimeout(finishTimer)
       }
@@ -1317,8 +1343,10 @@ export default function App() {
     workspaceReady: hydrated,
     sessionReady: startupProgress.sessionReady,
     driversReady: startupProgress.driversReady,
+    standingsReady: startupProgress.standingsReady,
+    calendarReady: startupProgress.calendarReady,
   }
-  const startupDataReady = mergedProgress.workspaceReady && mergedProgress.sessionReady && mergedProgress.driversReady
+  const startupDataReady = mergedProgress.workspaceReady && mergedProgress.sessionReady && mergedProgress.driversReady && mergedProgress.standingsReady && mergedProgress.calendarReady
   const shouldBlockStartup = mode !== 'onboarding' && mode !== 'demo' && !startupDataReady
   const showStartupSplash = useStartupSplashVisibility(shouldBlockStartup)
   const effectiveOverlayProgress = loadingPreviewActive ? loadingPreviewProgress : mergedProgress

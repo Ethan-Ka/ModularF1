@@ -159,6 +159,8 @@ _headlines_cache: dict = {"items": [], "fetched_at": 0}
 _HEADLINES_TTL = 300  # 5 minutes
 
 RSS_FEEDS = [
+    "https://www.formula1.com/en/latest/all.xml",
+    "https://www.fia.com/rss/news",
     "https://feeds.bbci.co.uk/sport/formula1/rss.xml",
     "https://www.motorsport.com/rss/f1/news/",
 ]
@@ -221,6 +223,8 @@ def _fetch_headlines_sync() -> list[dict]:
     if now - _headlines_cache["fetched_at"] < _HEADLINES_TTL and _headlines_cache["items"]:
         return _headlines_cache["items"]
 
+    aggregated: list[dict] = []
+    seen_keys: set[str] = set()
     for feed_url in RSS_FEEDS:
         try:
             req = urllib.request.Request(feed_url, headers={"User-Agent": "Pitwall/1.0"})
@@ -260,6 +264,10 @@ def _fetch_headlines_sync() -> list[dict]:
                 if not image and link:
                     image = _fetch_og_image(link)
                 if title:
+                    key = f"{title}|{link}"
+                    if key in seen_keys:
+                        continue
+                    seen_keys.add(key)
                     results.append({
                         "title": title,
                         "link": link,
@@ -269,11 +277,14 @@ def _fetch_headlines_sync() -> list[dict]:
                         "image": image,
                     })
             if results:
-                _headlines_cache["items"] = results
-                _headlines_cache["fetched_at"] = now
-                return results
+                aggregated.extend(results)
         except Exception:
             continue
+
+    if aggregated:
+        _headlines_cache["items"] = aggregated
+        _headlines_cache["fetched_at"] = now
+        return aggregated
 
     return _headlines_cache["items"]  # stale data on failure
 

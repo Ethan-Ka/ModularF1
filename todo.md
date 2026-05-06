@@ -13,7 +13,7 @@
 - [ ] make bbc not the only F1 source - ADD OFFICIAL FIA AND F1 ANNOUNCEMENTS
 - [ ] Add timezone to next race time display
 - [ ] add a bunch of stuff to the loading sequence
-- [ ] 
+
 
 FIX THE SECTOR MAP AND TRACK MAP
 
@@ -42,6 +42,7 @@ P1 and a driver should not be able to be selected at the same time
 
 # To Do
 
+- [ ] seasonhub roadmap, maybe have it be a globe with a focus on that country
 - [ ] fix popout widgets sync
 - [ ] Fix season standings thing/data
 - [ ] add a widget for individual driver radio?

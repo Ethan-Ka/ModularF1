@@ -102,8 +102,13 @@ function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerInd
   const fullName = driver?.full_name ?? `Driver ${standing.driverNumber}`
   const teamName = driver?.team_name ?? '—'
   const headshotUrl = driver?.headshot_url
+  const [imageFailed, setImageFailed] = useState(false)
   const gap = leaderPoints - standing.points
   const barPct = maxPoints > 0 ? (standing.points / maxPoints) * 100 : 0
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [headshotUrl])
 
   return (
     <div
@@ -174,13 +179,13 @@ function DriverRow({ standing, rank, maxPoints, leaderPoints, isHero, staggerInd
             position: 'relative',
           }}
         >
-          {headshotUrl ? (
+          {headshotUrl && !imageFailed ? (
             <img
               src={headshotUrl}
               alt={code}
               style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
               onError={(e) => {
-                ;(e.target as HTMLImageElement).style.display = 'none'
+                setImageFailed(true)
               }}
             />
           ) : (
@@ -496,15 +501,38 @@ export function SeasonStandingsPanel({
   panelClassName,
 }: SeasonStandingsPanelProps) {
   const [profileDriverNumber, setProfileDriverNumber] = useState<number | null>(null)
+  const standingsYear = 2026
+  const defaultTeamColor = '#6B6B70'
 
-  const { standings, isLoading, isRefreshing, raceCount, loadedCount, totalFetchSteps } = useSeasonStandings(2026)
-  const { getDriver, getTeamColor } = useDriverStore()
+  const { standings, isLoading, isRefreshing, raceCount, loadedCount, totalFetchSteps } = useSeasonStandings(standingsYear)
+  const { getDriver, getTeamColor, drivers, seasonYear, importSeasonFromPublic, applySeasonVisualsFromPublic } = useDriverStore()
+
+  useEffect(() => {
+    if (drivers.length === 0 || seasonYear !== standingsYear) {
+      void importSeasonFromPublic(standingsYear).catch(() => {
+        // Optional preload for standings rendering; ignore missing season bundles.
+      })
+      return
+    }
+
+    void applySeasonVisualsFromPublic(standingsYear).catch(() => {
+      // Optional visual override; keep existing data if unavailable.
+    })
+  }, [drivers.length, seasonYear, standingsYear, importSeasonFromPublic, applySeasonVisualsFromPublic])
 
   const maxDriverPoints = standings?.[0]?.points ?? 1
 
   // Build constructor standings from driver data
   const constructorStandings = useMemo(() => {
     if (!standings) return []
+
+    const teamColorByName = new Map<string, string>()
+    for (const driver of drivers) {
+      const key = driver.team_name.trim().toLowerCase()
+      if (!key || teamColorByName.has(key)) continue
+      const normalized = driver.team_colour.replace(/^#/, '')
+      teamColorByName.set(key, `#${normalized}`)
+    }
 
     const teamMap = new Map<
       string,
@@ -520,11 +548,16 @@ export function SeasonStandingsPanel({
     for (const d of standings) {
       const driver = getDriver(d.driverNumber)
       const teamName = d.constructorName ?? driver?.team_name ?? 'Unknown'
+      const teamKey = teamName.trim().toLowerCase()
+      const driverColor = getTeamColor(d.driverNumber)
+      const teamColor = driverColor !== defaultTeamColor
+        ? driverColor
+        : teamColorByName.get(teamKey) ?? defaultTeamColor
       const existing = teamMap.get(teamName)
       if (!existing) {
         teamMap.set(teamName, {
           teamName,
-          teamColor: getTeamColor(d.driverNumber),
+          teamColor,
           points: d.points,
           wins: d.wins,
           podiums: d.podiums,
@@ -540,7 +573,7 @@ export function SeasonStandingsPanel({
     }
 
     return Array.from(teamMap.values()).sort((a, b) => b.points - a.points)
-  }, [standings, getDriver, getTeamColor])
+  }, [standings, drivers, getDriver, getTeamColor])
 
   const maxConstructorPoints = constructorStandings[0]?.points ?? 1
 

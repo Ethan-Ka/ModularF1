@@ -8,6 +8,7 @@ import { SettingsPanel } from '../components/SettingsPanel/SettingsPanel'
 import { DriverManagerPanel } from '../components/DriverManager/DriverManagerPanel'
 import { DiagnosticLog } from '../components/DiagnosticLog/DiagnosticLog'
 import { useLogStore } from '../store/logStore'
+import { GlobeCalendar } from './GlobeCalendar'
 import type { OpenF1Session } from '../api/openf1'
 
 const YEAR = new Date().getFullYear()
@@ -72,6 +73,38 @@ function groupIntoWeekends(sessions: OpenF1Session[]): RaceWeekend[] {
     })
   }
   return weekends.sort((a, b) => a.earliestStart - b.earliestStart)
+}
+
+const CIRCUIT_FULL_NAME: Record<string, string> = {
+  'Austin':        'Circuit of the Americas',
+  'Bahrain':       'Bahrain International Circuit',
+  'Jeddah':        'Jeddah Corniche Circuit',
+  'Melbourne':     'Albert Park Circuit',
+  'Suzuka':        'Suzuka Circuit',
+  'Shanghai':      'Shanghai International Circuit',
+  'Miami':         'Miami International Autodrome',
+  'Imola':         'Autodromo Enzo e Dino Ferrari',
+  'Monaco':        'Circuit de Monaco',
+  'Montreal':      'Circuit Gilles-Villeneuve',
+  'Barcelona':     'Circuit de Barcelona-Catalunya',
+  'Spielberg':     'Red Bull Ring',
+  'Silverstone':   'Silverstone Circuit',
+  'Budapest':      'Hungaroring',
+  'Spa':           'Circuit de Spa-Francorchamps',
+  'Zandvoort':     'Circuit Zandvoort',
+  'Monza':         'Autodromo Nazionale Monza',
+  'Baku':          'Baku City Circuit',
+  'Singapore':     'Marina Bay Street Circuit',
+  'Lusail':        'Lusail International Circuit',
+  'Las Vegas':     'Las Vegas Strip Circuit',
+  'Mexico City':   'Autodromo Hermanos Rodriguez',
+  'São Paulo':     'Autodromo Jose Carlos Pace',
+  'Sao Paulo':     'Autodromo Jose Carlos Pace',
+  'Abu Dhabi':     'Yas Marina Circuit',
+  'Portimão':      'Autodromo Internacional do Algarve',
+  'Mugello':       'Autodromo Internazionale del Mugello',
+  'Istanbul':      'Istanbul Park',
+  'Madrid':        'Circuit de Madrid',
 }
 
 function countryFlag(countryName: string): string {
@@ -224,306 +257,6 @@ function getCountryPath(countryName: string): string | null {
     if (lower.includes(key)) return path
   }
   return null
-}
-
-// ─── Road Calendar ────────────────────────────────────────────────────────────
-
-const ROAD_W = 600   // canvas width in px
-const STEP = 290     // vertical spacing per race node
-const PAD_Y = 80     // top and bottom padding
-const CARD_W = 210   // race card width
-const NODE_GAP = 22  // gap between node dot and card edge
-
-const LX = 245   // left node x; left card starts at 245 - 22 - 210 = 13 > 0 ✓
-const RX = 345   // right node x; right card ends at 345 + 22 + 210 = 577 < 600 ✓
-
-function RoadCalendar({ weekends, now, imminentMeetingKey }: { weekends: RaceWeekend[]; now: number; imminentMeetingKey: number | null }) {
-  const { setMode } = useSessionStore()
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  const nextIndex = useMemo(() =>
-    weekends.findIndex(w => {
-      const r = w.sessions.find(s => s.session_type === 'Race')
-      return r ? new Date(r.date_end).getTime() >= now - 10 * 60_000 : false
-    }),
-    [weekends, now]
-  )
-
-  const totalH = weekends.length * STEP + PAD_Y * 2
-
-  // race[0] at bottom, race[N-1] at top
-  const nodes = useMemo(() =>
-    weekends.map((_, i) => ({
-      x: i % 2 === 0 ? LX : RX,
-      y: totalH - PAD_Y - i * STEP,
-    })),
-    [weekends, totalH]
-  )
-
-  // Cubic bezier S-curves: control points go straight up from each node
-  const pathD = useMemo(() => {
-    if (nodes.length === 0) return ''
-    return nodes.reduce((d, pos, i) => {
-      if (i === 0) return `M ${pos.x.toFixed(1)} ${pos.y.toFixed(1)}`
-      const prev = nodes[i - 1]
-      const cp1y = (prev.y - STEP * 0.48).toFixed(1)
-      const cp2y = (pos.y + STEP * 0.48).toFixed(1)
-      return `${d} C ${prev.x.toFixed(1)} ${cp1y}, ${pos.x.toFixed(1)} ${cp2y}, ${pos.x.toFixed(1)} ${pos.y.toFixed(1)}`
-    }, '')
-  }, [nodes])
-
-  // Scroll so next race appears ~40% from the top of the visible area
-  useEffect(() => {
-    if (nextIndex < 0 || !scrollRef.current) return
-    const pos = nodes[nextIndex]
-    if (!pos) return
-    const target = pos.y - scrollRef.current.clientHeight * 0.4
-    scrollRef.current.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
-  }, [nextIndex, nodes])
-
-  if (weekends.length === 0) {
-    return (
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'var(--mono)',
-        fontSize: 10,
-        color: 'rgba(255,255,255,0.18)',
-      }}>
-        Loading calendar…
-      </div>
-    )
-  }
-
-  return (
-    <div
-      ref={scrollRef}
-      style={{
-        flex: 1,
-        overflowY: 'auto',
-        scrollbarWidth: 'none',
-      }}
-    >
-      <div style={{ position: 'relative', width: ROAD_W, height: totalH, margin: '0 auto' }}>
-
-        {/* ── SVG layer: road + connectors + nodes ── */}
-        <svg
-          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-          width={ROAD_W}
-          height={totalH}
-          viewBox={`0 0 ${ROAD_W} ${totalH}`}
-        >
-          {/* Trail base glow */}
-          <path d={pathD} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" strokeLinecap="round" />
-          {/* Trail dashes */}
-          <path d={pathD} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="6 16" />
-
-          {/* per-node: connector + dot */}
-          {nodes.map((pos, i) => {
-            const w = weekends[i]
-            const raceSession = w.sessions.find(s => s.session_type === 'Race')
-            const raceEnd = raceSession ? new Date(raceSession.date_end).getTime() : 0
-            const done = raceEnd < now - 10 * 60_000
-            const isNext = i === nextIndex
-            const isImminent = w.meetingKey === imminentMeetingKey
-            const cardLeft = i % 2 === 0
-            const cx2 = cardLeft ? pos.x - NODE_GAP : pos.x + NODE_GAP
-            const outline = getCountryPath(w.countryName)
-
-            return (
-              <g key={w.meetingKey}>
-                {isNext && (
-                  <circle cx={pos.x} cy={pos.y} r={22} fill={isImminent ? 'rgba(232,19,43,0.12)' : 'rgba(232,19,43,0.07)'} />
-                )}
-                {isNext && isImminent && (
-                  <circle cx={pos.x} cy={pos.y} r={15} fill="none"
-                    stroke="rgba(232,19,43,0.5)" strokeWidth="1.5"
-                    style={{ animation: 'liveDotPulse 1.4s ease-in-out infinite' }} />
-                )}
-                {/* connector to card */}
-                <line
-                  x1={cardLeft ? pos.x - 5 : pos.x + 5} y1={pos.y}
-                  x2={cx2} y2={pos.y}
-                  stroke={isNext ? (isImminent ? 'rgba(232,19,43,0.5)' : 'rgba(232,19,43,0.3)') : 'rgba(255,255,255,0.07)'}
-                  strokeWidth={isImminent ? 1.5 : 1}
-                />
-                {/* outer ring for next */}
-                {isNext && (
-                  <circle cx={pos.x} cy={pos.y} r={10} fill="none"
-                    stroke={isImminent ? 'rgba(232,19,43,0.7)' : 'rgba(232,19,43,0.35)'} strokeWidth="1.5" />
-                )}
-                {/* country outline — rendered before dot so dot sits on top
-                CHANGE THIS TO BE THE TRACK
-                 */}
-                {outline && (
-                  <g transform={`translate(${pos.x - 100}, ${pos.y - 70}) scale(2)`} opacity={done ? 0.06 : isNext ? 0.22 : 0.12}>
-                    <path d={outline} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
-                  </g>
-                )}
-                {/* node dot */}
-                <circle
-                  cx={pos.x} cy={pos.y}
-                  r={isNext ? 7 : 4}
-                  fill={isNext ? '#e8132b' : done ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.3)'}
-                />
-              </g>
-            )
-          })}
-        </svg>
-
-        {/* ── DOM layer: race cards ── */}
-        {nodes.map((pos, i) => {
-          const w = weekends[i]
-          const raceSession = w.sessions.find(s => s.session_type === 'Race')
-          const raceEnd = raceSession ? new Date(raceSession.date_end).getTime() : 0
-          const done = raceEnd < now - 10 * 60_000
-          const isNext = i === nextIndex
-          const isImminent = w.meetingKey === imminentMeetingKey
-          const cardLeft = i % 2 === 0
-          const outline = getCountryPath(w.countryName)
-
-          const raceDate = raceSession
-            ? new Date(raceSession.date_start).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
-            : null
-
-          const sortedSessions = [...w.sessions].sort(
-            (a, b) => (SESSION_META[a.session_type]?.order ?? 99) - (SESSION_META[b.session_type]?.order ?? 99)
-          )
-
-          return (
-            <div
-              key={w.meetingKey}
-              onClick={isImminent ? () => setMode('live') : undefined}
-              style={{
-                position: 'absolute',
-                top: Math.min(
-                  Math.max(pos.y)
-                ),
-                ...(cardLeft
-                  ? { right: ROAD_W - pos.x + NODE_GAP }
-                  : { left: pos.x + NODE_GAP }),
-                width: CARD_W,
-                background: isNext && isImminent
-                  ? 'rgba(232,19,43,0.12)'
-                  : isNext
-                  ? 'rgba(232,19,43,0.05)'
-                  : done
-                  ? 'rgba(0,0,0,0.2)'
-                  : 'rgba(255,255,255,0.025)',
-                border: isNext && isImminent
-                  ? '1px solid rgba(232,19,43,0.6)'
-                  : isNext
-                  ? '0.5px solid rgba(232,19,43,0.28)'
-                  : done
-                  ? '0.5px solid rgba(255,255,255,0.04)'
-                  : '0.5px solid rgba(255,255,255,0.07)',
-                borderRadius: 6,
-                padding: '14px 18px 13px',
-                opacity: done && !isNext ? 0.52 : 1,
-                transition: 'opacity 0.2s, border-color 0.2s',
-                cursor: isImminent ? 'pointer' : 'default',
-                overflow: 'hidden',
-              }}
-            >
-              {/* Round label */}
-              <div style={{
-                fontFamily: 'var(--mono)',
-                fontSize: 8,
-                letterSpacing: '0.13em',
-                color: isNext ? 'rgba(232,19,43,0.65)' : 'rgba(255,255,255,0.18)',
-                marginBottom: 4,
-              }}>
-                R{w.roundNumber.toString().padStart(2, '0')}
-              </div>
-
-              {/* Flag + location */}
-              <div style={{
-                fontFamily: 'var(--cond)',
-                fontSize: 18,
-                fontWeight: 700,
-                letterSpacing: '0.01em',
-                lineHeight: 1.15,
-                marginBottom: 6,
-                color: done ? 'rgba(255,255,255,0.4)' : isNext ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.78)',
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: 4,
-              }}>
-                
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {w.circuitShort}
-                </span>
-              </div>
-
-              {/* Session dots */}
-              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 6 }}>
-                {sortedSessions.map(s => {
-                  const meta = SESSION_META[s.session_type] ?? { label: '?', color: 'rgba(120,120,120,0.5)', order: 99 }
-                  const sEnd = new Date(s.date_end).getTime()
-                  const sStart = new Date(s.date_start).getTime()
-                  const sDone = sEnd < now - 10 * 60_000
-                  const sActive = sStart <= now && sEnd >= now - 10 * 60_000
-                  return (
-                    <div
-                      key={s.session_key}
-                      title={s.session_type}
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: 2,
-                        background: sDone || sActive ? meta.color : 'rgba(255,255,255,0.05)',
-                        border: `0.5px solid ${sDone || sActive ? 'transparent' : 'rgba(255,255,255,0.07)'}`,
-                        boxShadow: sActive ? `0 0 5px ${meta.color}` : 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <span style={{
-                        fontFamily: 'var(--mono)',
-                        fontSize: 6,
-                        fontWeight: 700,
-                        color: sDone || sActive ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.14)',
-                        lineHeight: 1,
-                      }}>
-                        {meta.label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {raceDate && (
-                <div style={{
-                  fontFamily: 'var(--mono)',
-                  fontSize: 8,
-                  letterSpacing: '0.05em',
-                  color: 'rgba(255,255,255,0.22)',
-                }}>
-                  {raceDate}
-                </div>
-              )}
-
-              {isImminent && (
-                <div style={{
-                  fontFamily: 'var(--mono)',
-                  fontSize: 7,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(232,19,43,0.75)',
-                  marginTop: 5,
-                }}>
-                  → Go live
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
 }
 
 // ─── Headlines Feed ───────────────────────────────────────────────────────────
@@ -736,7 +469,6 @@ function NextRaceCard() {
   const raceStart = new Date(nextRace.date_start)
   const isLive = proximity === 'live'
   const isImminent = proximity === 'live' || proximity === 'imminent'
-  const flagUrl = countryFlagImageUrl(nextRace.country_name ?? '')
 
   const formatCountdown = (ms: number) => {
     if (ms <= 0) return 'Starting now'
@@ -790,9 +522,11 @@ function NextRaceCard() {
         }}>
           <span
             style={{
-
+              width: 24,
               height: 24,
+              borderRadius: '50%',
               border: '0.5px solid rgba(255,255,255,0.18)',
+              background: 'rgba(0,0,0,0.22)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -803,14 +537,14 @@ function NextRaceCard() {
               overflow: 'hidden',
             }}
           >
-            {flagUrl ? (
+            {countryFlagImageUrl(nextRace.country_name ?? '') ? (
               <img
-                src={flagUrl}
+                src={countryFlagImageUrl(nextRace.country_name ?? '') ?? undefined}
                 alt={nextRace.country_name ? `${nextRace.country_name} flag` : 'Country flag'}
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'contain',
+                  objectFit: 'cover',
                 }}
               />
             ) : (
@@ -1033,7 +767,7 @@ export function SeasonHub() {
               Race Calendar
             </span>
           </div>
-          <RoadCalendar weekends={weekends} now={now} imminentMeetingKey={imminentMeetingKey} />
+          <GlobeCalendar weekends={weekends} now={now} imminentMeetingKey={imminentMeetingKey} />
         </div>
 
         {/* Right column: Next Race + Headlines + Standings */}
