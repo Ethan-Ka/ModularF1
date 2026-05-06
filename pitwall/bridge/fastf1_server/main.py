@@ -163,6 +163,7 @@ RSS_FEEDS = [
     "https://www.fia.com/rss/news",
     "https://feeds.bbci.co.uk/sport/formula1/rss.xml",
     "https://www.motorsport.com/rss/f1/news/",
+    "https://www.espn.com/f1/",
 ]
 
 _META_OG_IMAGE = re.compile(
