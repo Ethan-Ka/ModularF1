@@ -88,7 +88,7 @@ Pitwall uses a 24-column drag-and-drop grid. Widgets can be freely repositioned 
 - **Resize**: Drag the southeast corner of any widget. Minimum dimensions are enforced per widget type.
 - **Pop out**: Widgets can be detached into their own window on Electron builds.
 
-### Widgets
+### Widget Examples
 
 | Sector Mini Cards | Strategy Timeline |
 |---|---|
