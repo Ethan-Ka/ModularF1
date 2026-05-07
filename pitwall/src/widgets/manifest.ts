@@ -1,6 +1,5 @@
 import type { ComponentType } from 'react'
 import { LapDeltaTower, HELP as LapDeltaTower_HELP } from './LapDeltaTower'
-import { RunningOrderStrip, HELP as RunningOrderStrip_HELP } from './RunningOrderStrip'
 import { RaceControlFeed, HELP as RaceControlFeed_HELP } from './RaceControlFeed'
 import { WeatherDashboard, HELP as WeatherDashboard_HELP } from './WeatherDashboard'
 import { TyreIntelligence, HELP as TyreIntelligence_HELP } from './TyreIntelligence'
@@ -25,12 +24,9 @@ import { GearTrace, HELP as GearTrace_HELP } from './GearTrace'
 import { ThrottleHeatmap, HELP as ThrottleHeatmap_HELP } from './ThrottleHeatmap'
 import { StrategyTimeline, HELP as StrategyTimeline_HELP } from './StrategyTimeline'
 import { DegRateGraph, HELP as DegRateGraph_HELP } from './DegRateGraph'
-import { PitWindowUrgency, HELP as PitWindowUrgency_HELP } from './PitWindowUrgency'
 import { PitStopLog, HELP as PitStopLog_HELP } from './PitStopLog'
 import { UndercutSimulator, HELP as UndercutSimulator_HELP } from './UndercutSimulator'
-import { SectorMap, HELP as SectorMap_HELP } from './SectorMap'
 import { OvertakeReplay, HELP as OvertakeReplay_HELP } from './OvertakeReplay'
-import { WindDirection, HELP as WindDirection_HELP } from './WindDirection'
 import { StandingsTable, HELP as StandingsTable_HELP } from './StandingsTable'
 import { ChampionshipCalculator, HELP as ChampionshipCalculator_HELP } from './ChampionshipCalculator'
 import { PointsDeltaTracker, HELP as PointsDeltaTracker_HELP } from './PointsDeltaTracker'
@@ -219,18 +215,7 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minW: 10,
     component: CarVisualization,
   },
-  {
-    type: 'RunningOrderStrip',
-    label: 'Running Order Strip',
-    description: 'Horizontal dot row of all 20 drivers by position',
-    help: RunningOrderStrip_HELP,
-    category: 'Race Control',
-    color: 'var(--orange)',
-    defaultSize: { w: 24, h: 2 },
-    minH: 1,
-    fitContent: false,
-    component: RunningOrderStrip,
-  },
+
   {
     type: 'RaceControlFeed',
     label: 'Race Control Feed',
@@ -276,17 +261,7 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minH: 7,
     component: DegRateGraph,
   },
-  {
-    type: 'PitWindowUrgency',
-    label: 'Pit Window Urgency',
-    description: 'Inferred urgency signal for next stop window',
-    help: PitWindowUrgency_HELP,
-    category: 'Strategy',
-    color: 'var(--gold)',
-    defaultSize: { w: 4, h: 5 },
-    minH: 5,
-    component: PitWindowUrgency,
-  },
+
   {
     type: 'PitStopLog',
     label: 'Pit Stop Log',
@@ -342,17 +317,7 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minH: 5,
     component: TrackTempEvolution,
   },
-  {
-    type: 'WindDirection',
-    label: 'Wind Direction',
-    description: 'Wind direction and drift changes by heading',
-    help: WindDirection_HELP,
-    category: 'Weather',
-    color: 'var(--blue)',
-    defaultSize: { w: 4, h: 7 },
-    minH: 7,
-    component: WindDirection,
-  },
+
   {
     type: 'WeatherRadar',
     label: 'Weather Radar',
@@ -374,17 +339,6 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     defaultSize: { w: 8, h: 8 },
     minH: 3,
     component: FullTrackMap,
-  },
-  {
-    type: 'SectorMap',
-    label: 'Sector Map',
-    description: 'Track sectors with driver position context',
-    help: SectorMap_HELP,
-    category: 'Track',
-    color: 'var(--green)',
-    defaultSize: { w: 9, h: 11 },
-    minH: 3,
-    component: SectorMap,
   },
   {
     type: 'OvertakeReplay',

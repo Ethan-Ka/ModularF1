@@ -1,7 +1,7 @@
 {
   "name": "pitwall",
   "private": true,
-  "version": "0.2.5",
+  "version": "0.3.0",
   "author":"Ethan Kawley",
   "description": "Fan-built F1 race intelligence platform.",
   "type": "module",
