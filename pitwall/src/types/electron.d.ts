@@ -2,7 +2,8 @@ interface ElectronAPI {
   platform: string
   openNewWindow: (options?: {
     transferWidget?: unknown
-    windowKind?: 'widget-popout'
+    windowKind?: 'widget-popout' | 'driver-manager' | 'widget-settings'
+    widgetId?: string
     popoutBounds?: {
       x?: number
       y?: number

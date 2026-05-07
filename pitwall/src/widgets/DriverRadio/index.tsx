@@ -1,21 +1,20 @@
-export const HELP = `# Radio Feed (Text)
+export const HELP = `# Driver Radio
 
-Scrolling audio feed of team radio messages for all drivers, in chronological order.
+Per-driver team radio feed — shows only messages from the focused or pinned driver, with audio playback.
 
-- **Timestamp**: UTC time the radio message was received.
-- **Driver chip**: Team-colour badge showing the driver's three-letter code.
-- **Play button**: Listen to the transmission audio in-widget.
+- **Driver context**: Uses the same Focus/Pinned/Position selector as other driver widgets.
+- **Play button**: Tap to hear a transmission; tap again to stop.
+- **Timestamp**: UTC time of each transmission.
+- **Live badge**: Shown when actively receiving data from the timing feed.
 
-Unfamiliar terms:
-
-- *Team radio*: Voice communication between driver and race engineer during a session. FOM selectively broadcasts these via the official timing feed.
-- *Race engineer (RE)*: The team member who talks to the driver — strategy updates, competitor gaps, and technical feedback all come through the RE.
-
-Notes: requires live mode and F1TV authentication. Not all transmissions are broadcast publicly — coverage varies by session. Use the Radio Scanner widget to see activity levels at a glance.
+Requires live mode and F1TV authentication.
 `
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTeamRadio } from '../../hooks/useTeamRadio'
+import { useWidgetDriver } from '../../hooks/useWidgetDriver'
+import { useWidgetConfig } from '../../hooks/useWidgetConfig'
 import { useDriverStore } from '../../store/driverStore'
+import { useSessionStore } from '../../store/sessionStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import type { LiveTeamRadio } from '../../api/liveTimingBridge'
 import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
@@ -49,35 +48,6 @@ function PauseIcon() {
   )
 }
 
-function DriverChip({ driverNumber }: { driverNumber: number }) {
-  const getDriver = useDriverStore((s) => s.getDriver)
-  const getTeamColor = useDriverStore((s) => s.getTeamColor)
-  const driver = getDriver(driverNumber)
-  const color = getTeamColor(driverNumber)
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-      <div style={{
-        width: 3,
-        height: 16,
-        background: color,
-        borderRadius: 1,
-        flexShrink: 0,
-      }} />
-      <span style={{
-        fontFamily: 'var(--mono)',
-        fontSize: 9,
-        fontWeight: 700,
-        color: 'var(--white)',
-        letterSpacing: '0.06em',
-        minWidth: 24,
-      }}>
-        {driver?.name_acronym ?? `#${driverNumber}`}
-      </span>
-    </div>
-  )
-}
-
 interface RadioRowProps {
   entry: LiveTeamRadio
   isPlaying: boolean
@@ -100,12 +70,10 @@ function RadioRow({ entry, isPlaying, onToggle }: RadioRowProps) {
         color: 'var(--muted2)',
         letterSpacing: '0.04em',
         flexShrink: 0,
-        width: 46,
+        width: 52,
       }}>
         {formatTime(entry.date)}
       </span>
-
-      <DriverChip driverNumber={entry.driver_number} />
 
       <div style={{ flex: 1 }} />
 
@@ -133,12 +101,15 @@ function RadioRow({ entry, isPlaying, onToggle }: RadioRowProps) {
   )
 }
 
-interface RadioFeedTextProps {
-  widgetId: string
-}
+export function DriverRadio({ widgetId }: { widgetId: string }) {
+  const config = useWidgetConfig(widgetId)
+  const { driverNumber } = useWidgetDriver(config?.driverContext ?? 'FOCUS')
+  const getDriver = useDriverStore((s) => s.getDriver)
+  const getTeamColor = useDriverStore((s) => s.getTeamColor)
+  const mode = useSessionStore((s) => s.mode)
+  const f1tvAuthenticated = useSessionStore((s) => s.f1tvAuthenticated)
 
-export function RadioFeedText({ widgetId: _ }: RadioFeedTextProps) {
-  const { data } = useTeamRadio()
+  const { data } = useTeamRadio(driverNumber ?? undefined)
   const refreshFade = useRefreshFade([data])
 
   const [playingUrl, setPlayingUrl] = useState<string | null>(null)
@@ -168,7 +139,10 @@ export function RadioFeedText({ widgetId: _ }: RadioFeedTextProps) {
 
   useEffect(() => () => stopAudio(), [stopAudio])
 
+  const driver = driverNumber ? getDriver(driverNumber) : null
+  const color = driverNumber ? getTeamColor(driverNumber) : 'var(--muted)'
   const entries = data ? [...data].reverse() : []
+  const isLiveAndAuth = mode === 'live' && f1tvAuthenticated
 
   return (
     <div
@@ -181,7 +155,6 @@ export function RadioFeedText({ widgetId: _ }: RadioFeedTextProps) {
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
       <div style={{
         padding: '4px 8px',
         borderBottom: '0.5px solid var(--border)',
@@ -192,44 +165,72 @@ export function RadioFeedText({ widgetId: _ }: RadioFeedTextProps) {
         gap: 8,
       }}>
         <div style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: 'var(--pink)',
+          width: 3,
+          height: 14,
+          background: color,
+          borderRadius: 1,
           flexShrink: 0,
         }} />
         <span style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 7,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--muted2)',
+          fontFamily: 'var(--cond)',
+          fontSize: 11,
+          fontWeight: 700,
+          color: 'var(--white)',
+          letterSpacing: '0.04em',
         }}>
-          Radio Feed
+          {driver?.name_acronym ?? (driverNumber ? `#${driverNumber}` : 'No Driver')}
         </span>
         <span style={{
           fontFamily: 'var(--mono)',
           fontSize: 7,
           color: 'var(--muted2)',
         }}>
-          {entries.length} messages
+          {entries.length} msg
         </span>
-        {playingUrl && (
+
+        {playingUrl ? (
           <span style={{
+            marginLeft: 'auto',
             fontFamily: 'var(--mono)',
             fontSize: 7,
             color: 'var(--pink)',
-            marginLeft: 'auto',
             letterSpacing: '0.08em',
           }}>
             ▶ playing
           </span>
-        )}
+        ) : isLiveAndAuth ? (
+          <span style={{
+            marginLeft: 'auto',
+            fontFamily: 'var(--mono)',
+            fontSize: 6,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--pink)',
+            border: '0.5px solid rgba(232, 100, 138, 0.4)',
+            borderRadius: 2,
+            padding: '1px 4px',
+          }}>
+            live
+          </span>
+        ) : null}
       </div>
 
-      {/* Feed */}
       <SmoothScrollContainer style={{ flex: 1 }}>
-        {entries.length === 0 ? (
+        {!isLiveAndAuth ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            fontFamily: 'var(--mono)',
+            fontSize: 9,
+            color: 'var(--muted2)',
+            textAlign: 'center',
+            padding: '0 16px',
+          }}>
+            {mode !== 'live' ? 'Live mode required' : 'F1TV login required'}
+          </div>
+        ) : !driverNumber ? (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -239,7 +240,19 @@ export function RadioFeedText({ widgetId: _ }: RadioFeedTextProps) {
             fontSize: 9,
             color: 'var(--muted2)',
           }}>
-            Waiting for radio messages…
+            No driver selected
+          </div>
+        ) : entries.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            fontFamily: 'var(--mono)',
+            fontSize: 9,
+            color: 'var(--muted2)',
+          }}>
+            No radio yet
           </div>
         ) : (
           entries.map((entry, i) => (

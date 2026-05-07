@@ -10,10 +10,10 @@ Activity monitor for team radio — shows which drivers have been on the radio r
 
 Unfamiliar terms:
 
-- *Team radio*: Voice communications between a driver and their race engineer, officially broadcast via the FIA data feed. Includes strategy calls, car feedback, and driver queries.
+- *Team radio*: Voice communications between a driver and their race engineer, officially broadcast via the FIA timing feed. Includes strategy calls, car feedback, and driver queries.
 - *Race engineer (RE)*: The team member who communicates with the driver during a session, relaying strategy, competitor information, and car status.
 
-Notes: radio transcripts are text-decoded from the OpenF1 audio feed where available. Not all transmissions are captured — some may be missing or delayed. Audio playback is not available in this widget; use the Radio Feed (Text) widget to read transcripts.
+Notes: requires live mode and F1TV authentication. Not all transmissions are broadcast publicly — coverage varies by session. Use Radio Feed (Text) or Driver Radio to play audio.
 `
 import { useMemo } from 'react'
 import { useTeamRadio } from '../../hooks/useTeamRadio'

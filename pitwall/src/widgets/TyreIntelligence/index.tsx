@@ -1,13 +1,14 @@
-import { useStints } from '../../hooks/useStints'
-import { useLaps } from '../../hooks/useLaps'
-import { useWeather } from '../../hooks/useWeather'
 import { useWidgetDriver } from '../../hooks/useWidgetDriver'
 import { useWidgetConfig } from '../../hooks/useWidgetConfig'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
+import { useDegInference, COMPOUND_COLORS, COMPOUND_ABBR } from '../../hooks/useDegInference'
+import { useStints } from '../../hooks/useStints'
+import { useLaps } from '../../hooks/useLaps'
+import { useWeather } from '../../hooks/useWeather'
 
 interface TyreIntelligenceProps {
   widgetId: string
-} 
+}
 
 export const HELP = `# Tyre Intelligence
 
@@ -18,6 +19,7 @@ Estimates tyre life and degradation for the selected driver.
 - **Degradation**: Percentage of tyre life used, with a visual meter.
 - **Cliff lap**: Predicted lap when tyre performance drops off sharply.
 - **Track temp**: Current track temperature (affects tyre life estimate).
+- **Pace load**: How hard the car is being driven vs. baseline (>1 = higher wear rate).
 - **Formula**: Shows the calculation used for cliff prediction.
 
 **Usage:**
@@ -25,72 +27,27 @@ Estimates tyre life and degradation for the selected driver.
 - Useful for pit strategy and stint planning.
 
 **Notes:**
+- When 2+ stint laps are available, cliff is predicted from live regression data.
+- At low confidence (new stint), temperature and compound baseline are used.
 - Estimates are approximate and may vary with race conditions.
-- Degradation and cliff lap are based on simplified models.
 `
-
-const BASE_WINDOW: Record<string, number> = {
-  SOFT: 18,
-  MEDIUM: 28,
-  HARD: 40,
-  INTERMEDIATE: 35,
-  INTER: 35,
-  WET: 50,
-}
-
-const COMPOUND_COLORS: Record<string, string> = {
-  SOFT: 'var(--red)',
-  MEDIUM: '#FFD600',
-  HARD: 'var(--white)',
-  INTERMEDIATE: 'var(--green)',
-  INTER: 'var(--green)',
-  WET: 'var(--blue)',
-}
-
-const COMPOUND_ABBR: Record<string, string> = {
-  SOFT: 'S',
-  MEDIUM: 'M',
-  HARD: 'H',
-  INTERMEDIATE: 'I',
-  INTER: 'I',
-  WET: 'W',
-}
-
-function compoundKey(compound: string): string {
-  return compound.toUpperCase()
-}
-
-function getLapCount(laps: { lap_number: number }[] | undefined, driverNumber: number | null): number {
-  if (!laps || !driverNumber) return 0
-  // Count distinct lap numbers for this driver (already filtered by driver)
-  return laps.filter((l) => l.lap_number != null).length
-}
 
 export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
   const config = useWidgetConfig(widgetId)
-
   const { driverNumber } = useWidgetDriver(config?.driverContext ?? 'FOCUS')
+
   const { data: stints } = useStints(driverNumber ?? undefined)
   const { data: laps } = useLaps(driverNumber ?? undefined)
   const { data: weatherAll } = useWeather()
+
+  const deg = useDegInference(driverNumber ?? undefined)
   const refreshFade = useRefreshFade([driverNumber, stints, laps, weatherAll])
 
-  const latestWeather = weatherAll?.[weatherAll.length - 1]
-  const trackTemp = latestWeather?.track_temperature ?? 45
-  const scLaps = 0 // SC laps not available in Phase 1; placeholder
-
-  // Current stint = latest
-  const currentStint = stints
-    ? [...stints].sort((a, b) => b.stint_number - a.stint_number)[0]
-    : null
-
   if (!driverNumber) {
-    return (
-      <NoDriverState />
-    )
+    return <NoDriverState />
   }
 
-  if (!currentStint) {
+  if (!deg.currentStint) {
     return (
       <div style={{
         display: 'flex',
@@ -106,46 +63,39 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
     )
   }
 
-  const compound = compoundKey(currentStint.compound)
-  const lapCount = getLapCount(laps, driverNumber)
-  const tyreAge = Math.max(0, lapCount - currentStint.lap_start + 1 + (currentStint.tyre_age_at_start ?? 0))
-  const baseWindow = BASE_WINDOW[compound] ?? 25
-
-  // Degradation rate estimate: simplified for Phase 1
-  const degRate = 0.05
-
-  const cliffLap = Math.round(
-    currentStint.lap_start +
-    baseWindow -
-    (trackTemp - 45) * 0.3 -
-    degRate * 1.8 +
-    scLaps * 2.1
-  )
-
-  const lapsToCliff = cliffLap - lapCount
-  const cliffTyreLife = Math.max(1, cliffLap - currentStint.lap_start + 1 + (currentStint.tyre_age_at_start ?? 0))
-  const degradationPct = Math.max(0, Math.min(100, (tyreAge / cliffTyreLife) * 100))
+  const compound = deg.compound
   const compoundColor = COMPOUND_COLORS[compound] ?? 'var(--muted)'
   const compoundAbbr = COMPOUND_ABBR[compound] ?? compound.slice(0, 1)
-  const cliffText = lapsToCliff > 0
-    ? `Cliff lap ${cliffLap} (${lapsToCliff} to cliff)`
-    : `Cliff lap ${cliffLap} (past cliff)`
+
+  const cliffText = deg.lapsToCliff > 0
+    ? `Cliff lap ${deg.cliffLap} (${deg.lapsToCliff} to cliff)`
+    : `Cliff lap ${deg.cliffLap} (past cliff)`
+
+  const confLabel =
+    deg.confidence === 'high' ? '±2 laps' :
+    deg.confidence === 'medium' ? '±3 laps' : '±5 laps (est)'
+
+  const degRateLabel = deg.degPerLap != null
+    ? `+${deg.degPerLap.toFixed(3)}s/lap`
+    : 'N/A'
 
   const formula = (config?.settings?.formula as string) ??
-    `CLIFF = stint_start + BASE_WINDOW[${compound}]\n  − (track_temp−45)×0.3\n  − deg_rate×1.8\n  + sc_laps×2.1`
+    (deg.degPerLap != null
+      ? `CLIFF = stint_start − tyre_age_at_start + round(BASE_WINDOW[${compound}] × BASE_DEG_RATE / (deg_rate × temp_mult))\n  deg_rate = ${deg.degPerLap.toFixed(3)} s/lap  (regression)\n  temp_mult = ${deg.tempMultiplier.toFixed(3)}  (track ${deg.trackTemp.toFixed(0)}°C vs 45°C baseline)\n  pace_load = ${deg.paceIntensity.toFixed(2)}  (observed wear / baseline)`
+      : `CLIFF = stint_start − tyre_age_at_start + round(BASE_WINDOW[${compound}] / temp_mult)\n  temp_mult = ${deg.tempMultiplier.toFixed(3)}  (track ${deg.trackTemp.toFixed(0)}°C vs 45°C baseline)\n  [using baseline rate — need 2+ stint laps for regression]`)
 
   return (
     <div
       className={refreshFade ? 'data-refresh-fade' : undefined}
       style={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 0,
-      padding: 8,
-      overflow: 'hidden',
-    }}>
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0,
+        padding: 8,
+        overflow: 'hidden',
+      }}>
       {/* Compound badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <div style={{
@@ -194,16 +144,26 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
         marginBottom: 10,
       }}>
         <DegradationStatBox
-          percentage={degradationPct}
+          percentage={deg.degradationPct}
           cliffText={cliffText}
           accentColor={compoundColor}
         />
-        <StatBox label="Stint" value={`#${currentStint.stint_number}`} />
-        <StatBox label="Tyre life" value={`${tyreAge}/${cliffTyreLife} laps`} />
-        <StatBox label="Track temp" value={`${trackTemp.toFixed(0)}°C`} />
+        <StatBox label="Stint" value={`#${deg.currentStint.stint_number}`} />
+        <StatBox label="Tyre life" value={`${deg.tyreAge}/${deg.cliffTyreLife} laps`} />
+        <StatBox label="Track temp" value={`${deg.trackTemp.toFixed(0)}°C`} />
+        <StatBox
+          label="Deg rate"
+          value={degRateLabel}
+          valueColor={deg.degPerLap != null ? 'var(--amber)' : 'var(--muted)'}
+        />
+        <StatBox
+          label="Pace load"
+          value={`${deg.paceIntensity.toFixed(2)}×`}
+          valueColor={deg.paceIntensity > 1.2 ? 'var(--red)' : deg.paceIntensity > 0.9 ? 'var(--amber)' : 'var(--green)'}
+        />
       </div>
 
-      {/* Accuracy label */}
+      {/* Confidence label */}
       <div style={{
         fontFamily: 'var(--mono)',
         fontSize: 7,
@@ -211,7 +171,7 @@ export function TyreIntelligence({ widgetId }: TyreIntelligenceProps) {
         letterSpacing: '0.08em',
         marginBottom: 10,
       }}>
-        Est. accuracy: ±3 laps
+        {deg.confidence === 'low' ? '⚠ ' : ''}Est. accuracy: {confLabel}
       </div>
 
       {/* Formula collapsed block */}

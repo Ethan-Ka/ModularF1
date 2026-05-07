@@ -320,19 +320,28 @@ function createWindow(options = {}) {
   }
 
   if (isDev) {
-    const targetUrl = isWidgetPopout
-      ? `${process.env.VITE_DEV_SERVER_URL}?windowKind=widget-popout${bootstrapWidgetType ? `&widgetType=${encodeURIComponent(bootstrapWidgetType)}` : ''}`
-      : process.env.VITE_DEV_SERVER_URL
-    win.loadURL(targetUrl)
+    const devParams = new URLSearchParams()
+    if (isPanelWindow) {
+      devParams.set('windowKind', windowKind)
+      if (isWidgetPopout && bootstrapWidgetType) devParams.set('widgetType', encodeURIComponent(bootstrapWidgetType))
+      if ((isWidgetSettings || isDriverManager) && options.widgetId && typeof options.widgetId === 'string') {
+        devParams.set('widgetId', options.widgetId)
+      }
+    }
+    const devQs = devParams.toString()
+    win.loadURL(`${process.env.VITE_DEV_SERVER_URL}${devQs ? `?${devQs}` : ''}`)
     // Only open DevTools on the first window
     if (BrowserWindow.getAllWindows().length === 0) {
       win.webContents.openDevTools()
     }
   } else {
     const params = new URLSearchParams()
-    if (isWidgetPopout) {
-      params.set('windowKind', 'widget-popout')
-      if (bootstrapWidgetType) params.set('widgetType', bootstrapWidgetType)
+    if (isPanelWindow) {
+      params.set('windowKind', windowKind)
+      if (isWidgetPopout && bootstrapWidgetType) params.set('widgetType', bootstrapWidgetType)
+      if ((isWidgetSettings || isDriverManager) && options.widgetId && typeof options.widgetId === 'string') {
+        params.set('widgetId', options.widgetId)
+      }
     }
     const qs = params.toString()
     win.loadURL(`app://./index.html${qs ? `?${qs}` : ''}`)
@@ -732,6 +741,7 @@ app.whenReady().then(() => {
       "script-src 'self' app:",
       "style-src 'self' app: 'unsafe-inline'",
       "connect-src 'self' app: https://api.openf1.org https://api.jolpi.ca https://raw.githubusercontent.com http://127.0.0.1:7822",
+      "media-src 'self' app: http://127.0.0.1:7822",
       "img-src 'self' app: data:",
       "font-src 'self' app:",
       "object-src 'none'",
@@ -809,7 +819,8 @@ app.whenReady().then(() => {
           }
         : {}),
       bootstrapWidget,
-      windowKind: bootstrapWidget ? 'widget-popout' : undefined,
+      windowKind: bootstrapWidget ? 'widget-popout' : (options && typeof options.windowKind === 'string' ? options.windowKind : undefined),
+      widgetId: options && typeof options.widgetId === 'string' ? options.widgetId : undefined,
     })
   })
 

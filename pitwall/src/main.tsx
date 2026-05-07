@@ -19,23 +19,12 @@ const queryClient = new QueryClient({
   },
 })
 
-function isWidgetPopoutWindow(): boolean {
-  try {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('windowKind') === 'widget-popout'
-  } catch {
-    return false
-  }
-}
-
 async function resolveRootComponent() {
-  if (isWidgetPopoutWindow()) {
-    const popoutModule = await import('./PopoutApp.tsx')
-    return popoutModule.default
-  }
-
-  const appModule = await import('./App.tsx')
-  return appModule.default
+  const kind = new URLSearchParams(window.location.search).get('windowKind')
+  if (kind === 'widget-popout') return (await import('./PopoutApp.tsx')).default
+  if (kind === 'driver-manager') return (await import('./DriverManagerApp.tsx')).default
+  if (kind === 'widget-settings') return (await import('./WidgetSettingsApp.tsx')).default
+  return (await import('./App.tsx')).default
 }
 
 void resolveRootComponent().then((RootComponent) => {

@@ -646,7 +646,7 @@ function BroadcastSync() {
 
     let applyingRemoteState = false
 
-    const postState = (scope: 'session' | 'ambient' | 'driver', payload: unknown) => {
+    const postState = (scope: 'session' | 'ambient' | 'workspace' | 'driver', payload: unknown) => {
       channel.postMessage({
         kind: 'state-sync',
         origin: WINDOW_CLIENT_ID,
@@ -668,6 +668,11 @@ function BroadcastSync() {
     const unsubscribeDriver = useDriverStore.subscribe((state) => {
       if (applyingRemoteState) return
       postState('driver', pickDriverSyncState(state))
+    })
+
+    const unsubscribeWorkspace = useWorkspaceStore.subscribe((state) => {
+      if (applyingRemoteState) return
+      postState('workspace', { tabs: state.tabs, activeTabId: state.activeTabId })
     })
 
     const unsubscribeBootstrap = window.electronAPI?.onWindowBootstrapWidget?.((rawPayload) => {
@@ -709,6 +714,9 @@ function BroadcastSync() {
         if (message.scope === 'driver' && message.payload && typeof message.payload === 'object') {
           useDriverStore.setState((s) => ({ ...s, ...(message.payload as Partial<ReturnType<typeof pickDriverSyncState>>) }))
         }
+        if (message.scope === 'workspace' && message.payload && typeof message.payload === 'object') {
+          useWorkspaceStore.setState((s) => ({ ...s, ...(message.payload as { tabs?: unknown; activeTabId?: unknown }) }))
+        }
       } finally {
         applyingRemoteState = false
       }
@@ -722,6 +730,7 @@ function BroadcastSync() {
       unsubscribeSession()
       unsubscribeAmbient()
       unsubscribeDriver()
+      unsubscribeWorkspace()
       if (typeof unsubscribeBootstrap === 'function') unsubscribeBootstrap()
       if (typeof unsubscribeDock === 'function') unsubscribeDock()
       channel.close()

@@ -201,6 +201,19 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
     }
   }
 
+  async function openSettingsWindow() {
+    if (!window.electronAPI) { setSettingsOpen(true); return }
+    try {
+      await window.electronAPI.openNewWindow({
+        windowKind: 'widget-settings',
+        widgetId,
+        popoutBounds: { width: 300, height: 680 },
+      })
+    } catch {
+      setSettingsOpen(true)
+    }
+  }
+
   async function dockWidgetBackToWorkspace() {
     if (!isPoppedOut || !window.electronAPI?.dockWidgetToMainWorkspace) return
     const payload = buildTransferPayload()
@@ -281,7 +294,7 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
           {/* Driver badge — clicking opens Driver tab in settings */}
           <div
             onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); setSettingsOpen(true) }}
+            onClick={(e) => { e.stopPropagation(); if (isPoppedOut) { void openSettingsWindow() } else { setSettingsOpen(true) } }}
             className="interactive-chip"
             style={{
               display: 'flex',
@@ -364,7 +377,7 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
 
           {/* Gear icon → settings */}
           <button
-            onClick={(e) => { e.stopPropagation(); setSettingsOpen(true) }}
+            onClick={(e) => { e.stopPropagation(); if (isPoppedOut) { void openSettingsWindow() } else { setSettingsOpen(true) } }}
             onMouseDown={(e) => e.stopPropagation()}
             className="interactive-button"
             style={{
@@ -541,7 +554,7 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
             boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
           }}
         >
-          <ContextMenuItem onClick={() => { setSettingsOpen(true); setContextMenuPos(null) }}>
+          <ContextMenuItem onClick={() => { if (isPoppedOut) { void openSettingsWindow() } else { setSettingsOpen(true) } ; setContextMenuPos(null) }}>
             Settings
           </ContextMenuItem>
           {window.electronAPI && (

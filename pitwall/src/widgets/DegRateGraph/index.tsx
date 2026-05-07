@@ -5,6 +5,7 @@ import { useWidgetDriver } from '../../hooks/useWidgetDriver'
 import { useWidgetConfig } from '../../hooks/useWidgetConfig'
 import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
+import { useDegInference } from '../../hooks/useDegInference'
 import { formatTime, EmptyState } from '../widgetUtils'
 
 // ---------- linear regression ----------
@@ -137,6 +138,7 @@ export function DegRateGraph({ widgetId }: { widgetId: string }) {
 
   const { data: stints } = useStints(driverNumber ?? undefined)
   const { data: laps } = useLaps(driverNumber ?? undefined)
+  const deg = useDegInference(driverNumber ?? undefined)
 
   const refreshFade = useRefreshFade([laps, stints])
 
@@ -209,16 +211,8 @@ export function DegRateGraph({ widgetId }: { widgetId: string }) {
   const firstLapTime = chartPoints.length > 0 ? chartPoints[0].pace : null
   const lastLapTime = chartPoints.length > 0 ? chartPoints[chartPoints.length - 1].pace : null
 
-  const degPerLap = useMemo(() => {
-    if (chartPoints.length < 2) return null
-    let totalDelta = 0
-    let count = 0
-    for (let i = 1; i < chartPoints.length; i++) {
-      totalDelta += chartPoints[i].pace - chartPoints[i - 1].pace
-      count++
-    }
-    return totalDelta / count
-  }, [chartPoints])
+  // Use shared inference engine for deg/lap so all widgets stay consistent
+  const degPerLap = deg.degPerLap
 
   // ---------- X axis tick ages ----------
   const tickAges = useMemo(() => {
@@ -424,6 +418,16 @@ export function DegRateGraph({ widgetId }: { widgetId: string }) {
                 : '0.000s'
           }
           valueColor={degPerLap != null && degPerLap > 0 ? 'var(--amber)' : undefined}
+        />
+        <StatCell
+          label="TEMP ×"
+          value={`${deg.tempMultiplier.toFixed(2)}×`}
+          valueColor={deg.tempMultiplier > 1.1 ? 'var(--amber)' : 'var(--muted2)'}
+        />
+        <StatCell
+          label="LOAD"
+          value={`${deg.paceIntensity.toFixed(2)}×`}
+          valueColor={deg.paceIntensity > 1.2 ? 'var(--red)' : deg.paceIntensity > 0.9 ? 'var(--amber)' : 'var(--green)'}
         />
       </div>
     </div>

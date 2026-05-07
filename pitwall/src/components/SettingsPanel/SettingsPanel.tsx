@@ -930,7 +930,13 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               }}>
                 {starredCount} starred drivers{seasonYear ? ` · ${seasonYear} season` : ''}
               </span>
-              <ActionButton onClick={() => setDriverManagerOpen(true)}>
+              <ActionButton onClick={() => {
+                if (window.electronAPI) {
+                  void window.electronAPI.openNewWindow({ windowKind: 'driver-manager' })
+                } else {
+                  setDriverManagerOpen(true)
+                }
+              }}>
                 Open driver manager
               </ActionButton>
 

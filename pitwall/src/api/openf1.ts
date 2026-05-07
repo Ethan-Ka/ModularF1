@@ -184,20 +184,7 @@ export async function validateApiKey(
   }
 }
 
-// --- Sessions (used for team radio session-key mapping) ---
+// --- Sessions ---
 export function fetchSessions(params?: { year?: number }, apiKey?: string) {
   return openf1Fetch<OpenF1Session>('/sessions', params ?? {}, apiKey)
-}
-
-// --- Team Radio ---
-export interface OpenF1TeamRadio {
-  date: string
-  driver_number: number
-  meeting_key: number
-  recording_url: string
-  session_key: number
-}
-
-export function fetchTeamRadio(sessionKey: number, driverNumber?: number, apiKey?: string) {
-  return openf1Fetch<OpenF1TeamRadio>('/team_radio', { session_key: sessionKey, driver_number: driverNumber }, apiKey)
 }

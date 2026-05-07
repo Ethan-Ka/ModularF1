@@ -15,6 +15,7 @@ import { GapEvolutionChart, HELP as GapEvolutionChart_HELP } from './GapEvolutio
 import { TrackTempEvolution, HELP as TrackTempEvolution_HELP } from './TrackTempEvolution'
 import { RadioScanner, HELP as RadioScanner_HELP } from './RadioScanner'
 import { RadioFeedText, HELP as RadioFeedText_HELP } from './RadioFeedText'
+import { DriverRadio, HELP as DriverRadio_HELP } from './DriverRadio'
 import { SpeedGauge, HELP as SpeedGauge_HELP } from './SpeedGauge'
 import { ERSMicroSectors, HELP as ERSMicroSectors_HELP } from './ERSMicroSectors'
 import { DRSEfficiency, HELP as DRSEfficiency_HELP } from './DRSEfficiency'
@@ -412,7 +413,7 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
   {
     type: 'RadioFeedText',
     label: 'Radio Feed (Text)',
-    description: 'Text feed of transcribed radio messages',
+    description: 'Audio feed of team radio messages with playback',
     help: RadioFeedText_HELP,
     category: 'Radio',
     color: 'var(--pink)',
@@ -420,6 +421,18 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minH: 3,
     fitContent: false,
     component: RadioFeedText,
+  },
+  {
+    type: 'DriverRadio',
+    label: 'Driver Radio',
+    description: 'Per-driver radio feed with audio playback',
+    help: DriverRadio_HELP,
+    category: 'Radio',
+    color: 'var(--pink)',
+    defaultSize: { w: 5, h: 8 },
+    minH: 3,
+    fitContent: false,
+    component: DriverRadio,
   },
   {
     type: 'StandingsBoard',

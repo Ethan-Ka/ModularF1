@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAmbientStore } from '../../store/ambientStore'
 import { useDriverStore } from '../../store/driverStore'
 import { useSessionStore } from '../../store/sessionStore'
@@ -305,7 +306,7 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
     teamMap.set(d.team_name, [...existing, d])
   }
 
-  return (
+  return createPortal(
     <>
     {/* Backdrop */}
     <div
@@ -771,7 +772,8 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
         onClose={() => setProfileDriverNumber(null)}
       />
     )}
-  </>
+  </>,
+  document.body
   )
 }
 

@@ -6,6 +6,7 @@ FastF1 disk cache lives in .cache/ next to this file.
 """
 
 import asyncio
+import collections
 import json
 import math
 import os
@@ -30,6 +31,8 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastf1.internals.f1auth import AUTH_DATA_FILE, clear_auth_token
+from signalrcore.hub_connection_builder import HubConnectionBuilder
+from signalrcore.messages.completion_message import CompletionMessage
 
 PORT = 7822
 CACHE_DIR = os.path.join(os.path.dirname(__file__), ".cache")
@@ -133,6 +136,14 @@ async def _get_session(year: int, round_number: int, session_type: str) -> fastf
 async def lifespan(app: FastAPI):
     yield
     _session_cache.clear()
+    global _radio_connection, _radio_status
+    if _radio_connection is not None:
+        try:
+            _radio_connection.stop()
+        except Exception:
+            pass
+        _radio_connection = None
+        _radio_status = "idle"
 
 
 app = FastAPI(title="Pitwall FastF1 Bridge", version="0.1.0", lifespan=lifespan)
@@ -946,6 +957,173 @@ async def f1tv_start_auth():
 async def f1tv_sign_out():
     await asyncio.to_thread(clear_auth_token)
     return {"success": True}
+
+
+# ---------------------------------------------------------------------------
+# Live Team Radio — SignalR subscription
+# ---------------------------------------------------------------------------
+
+_LT_SIGNALR_URL = "https://livetiming.formula1.com/signalr"
+_LT_NEGOTIATE_URL = "https://livetiming.formula1.com/signalr/negotiate"
+_LT_STATIC_BASE = "https://livetiming.formula1.com/static/"
+
+_radio_lock = threading.Lock()
+_radio_connection = None          # HubConnection | None
+_radio_status: str = "idle"       # idle | connecting | connected | error
+_radio_buffer: list = []          # normalized capture dicts, insertion order
+_radio_seen: set = set()          # (utc_time, racing_number, path) dedup keys
+
+
+def _get_auth_header() -> dict:
+    token = _read_auth_token()
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
+
+
+def _normalize_capture(cap: dict) -> Optional[dict]:
+    path = cap.get("Path", "")
+    utc = cap.get("UtcTime", "")
+    num_str = str(cap.get("RacingNumber", "0"))
+    if not path or not utc:
+        return None
+    try:
+        driver_number = int(num_str)
+    except (ValueError, TypeError):
+        driver_number = 0
+    date = utc if (utc.endswith("Z") or "+" in utc) else utc + "Z"
+    encoded_path = urllib.parse.quote(path, safe="")
+    recording_url = f"http://127.0.0.1:{PORT}/team_radio/audio?path={encoded_path}"
+    return {"date": date, "driver_number": driver_number, "recording_url": recording_url}
+
+
+def _ingest_captures(captures: list) -> int:
+    added = 0
+    for cap in captures:
+        key = (cap.get("UtcTime", ""), str(cap.get("RacingNumber", "")), cap.get("Path", ""))
+        if key in _radio_seen:
+            continue
+        _radio_seen.add(key)
+        norm = _normalize_capture(cap)
+        if norm:
+            _radio_buffer.append(norm)
+            added += 1
+    return added
+
+
+def _on_feed_message(data):
+    if not isinstance(data, list) or len(data) < 2:
+        return
+    topic, payload = data[0], data[1]
+    if topic != "TeamRadio":
+        return
+    captures = payload.get("Captures", []) if isinstance(payload, dict) else []
+    with _radio_lock:
+        _ingest_captures(captures)
+
+
+def _on_completion(msg: CompletionMessage):
+    if not msg.result or not isinstance(msg.result, dict):
+        return
+    team_radio = msg.result.get("TeamRadio", {})
+    if isinstance(team_radio, dict):
+        captures = team_radio.get("Captures", [])
+        with _radio_lock:
+            _ingest_captures(captures)
+
+
+def _on_radio_open(conn):
+    global _radio_status
+    _radio_status = "connected"
+    conn.send("Subscribe", [["TeamRadio"]], on_invocation=_on_completion)
+
+
+def _build_radio_connection():
+    headers = _get_auth_header()
+    # Pre-negotiate to get AWS sticky cookie required by the F1 CDN
+    try:
+        import requests as _req
+        r = _req.options(_LT_NEGOTIATE_URL, headers=headers, timeout=10)
+        if "AWSALBCORS" in r.cookies:
+            headers["Cookie"] = f"AWSALBCORS={r.cookies['AWSALBCORS']}"
+    except Exception:
+        pass
+
+    conn = (
+        HubConnectionBuilder()
+        .with_url(_LT_SIGNALR_URL, options={"headers": headers, "verify_ssl": True})
+        .build()
+    )
+    conn.on("feed", _on_feed_message)
+    conn.on_open(lambda: _on_radio_open(conn))
+    conn.on_close(lambda: _set_radio_status("idle"))
+    conn.on_error(lambda err: _set_radio_status("error"))
+    return conn
+
+
+def _set_radio_status(status: str):
+    global _radio_status
+    _radio_status = status
+
+
+def _ensure_radio_connected():
+    global _radio_connection, _radio_status
+    with _radio_lock:
+        if _radio_status in ("connecting", "connected") and _radio_connection is not None:
+            return
+        # Clear buffer when starting a fresh connection (new session)
+        if _radio_status == "idle":
+            _radio_buffer.clear()
+            _radio_seen.clear()
+        _radio_status = "connecting"
+
+    conn = _build_radio_connection()
+    with _radio_lock:
+        _radio_connection = conn
+    conn.start()
+
+
+@app.get("/team_radio/status")
+async def get_team_radio_status():
+    with _radio_lock:
+        return {"status": _radio_status, "count": len(_radio_buffer)}
+
+
+@app.get("/team_radio")
+async def get_team_radio(driver_number: Optional[int] = None):
+    await asyncio.to_thread(_ensure_radio_connected)
+    with _radio_lock:
+        items = list(_radio_buffer)
+    if driver_number is not None:
+        items = [r for r in items if r["driver_number"] == driver_number]
+    return items
+
+
+@app.get("/team_radio/audio")
+async def get_team_radio_audio(path: str = Query(..., min_length=5, max_length=512)):
+    """Proxy audio from livetiming.formula1.com/static/ to bypass CORS."""
+    decoded_path = urllib.parse.unquote(path).lstrip("/")
+    url = f"{_LT_STATIC_BASE}{decoded_path}"
+    parsed = urllib.parse.urlparse(url)
+    if parsed.netloc != "livetiming.formula1.com":
+        raise HTTPException(status_code=400, detail="invalid path")
+
+    def _fetch():
+        headers = {"User-Agent": "Mozilla/5.0"}
+        token = _read_auth_token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return resp.read(), resp.headers.get("Content-Type", "audio/mpeg")
+        except Exception as exc:
+            return None, str(exc)
+
+    data, content_type = await asyncio.to_thread(_fetch)
+    if data is None:
+        raise HTTPException(status_code=502, detail=f"upstream error: {content_type}")
+    return Response(content=data, media_type="audio/mpeg")
 
 
 if __name__ == "__main__":

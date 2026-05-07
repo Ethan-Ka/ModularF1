@@ -22,18 +22,11 @@ import { useWidgetDriver } from '../../hooks/useWidgetDriver'
 import { useWidgetConfig } from '../../hooks/useWidgetConfig'
 import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
+import { useDegInference } from '../../hooks/useDegInference'
 import { EmptyState } from '../widgetUtils'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const TYPICAL_MAX: Record<string, number> = {
-  SOFT: 20,
-  MEDIUM: 35,
-  HARD: 50,
-  INTERMEDIATE: 30,
-  INTER: 30,
-  WET: 40,
-}
 
 const COMPOUND_COLOR: Record<string, string> = {
   SOFT: 'var(--red)',
@@ -47,11 +40,10 @@ const COMPOUND_COLOR: Record<string, string> = {
 // ─── Urgency logic ────────────────────────────────────────────────────────────
 
 function getUrgency(
-  compound: string,
   tyreAge: number,
+  cliffTyreLife: number,
 ): { level: 'OK' | 'WATCH' | 'PIT NOW'; color: string; pct: number } {
-  const max = TYPICAL_MAX[compound?.toUpperCase()] ?? 35
-  const pct = Math.min(tyreAge / max, 1)
+  const pct = Math.min(tyreAge / Math.max(1, cliffTyreLife), 1)
   if (pct < 0.65) return { level: 'OK', color: 'var(--green)', pct }
   if (pct < 0.85) return { level: 'WATCH', color: 'var(--amber)', pct }
   return { level: 'PIT NOW', color: 'var(--red)', pct }
@@ -98,39 +90,26 @@ export function PitWindowUrgency({ widgetId }: { widgetId: string }) {
 
   const { data: stints } = useStints(driverNumber)
   const { data: laps } = useLaps(driverNumber)
+  const deg = useDegInference(driverNumber ?? undefined)
 
   const refreshFade = useRefreshFade([stints, laps])
 
   // ── Derived values ──────────────────────────────────────────────────────────
 
   const result = useMemo(() => {
-    if (!stints?.length) return null
+    if (!deg.currentStint) return null
 
-    // Current stint: highest stint_number
-    const currentStint = [...stints].sort((a, b) => b.stint_number - a.stint_number)[0]
-
-    // Count laps completed in this stint
-    const lapsInStint =
-      laps?.filter(
-        (l) =>
-          l.lap_number >= currentStint.lap_start &&
-          l.lap_duration != null,
-      ).length ?? 0
-
-    const tyreAge = currentStint.tyre_age_at_start + lapsInStint
-    const compound = currentStint.compound?.toUpperCase() ?? 'UNKNOWN'
-    const max = TYPICAL_MAX[compound] ?? 35
-    const urgency = getUrgency(compound, tyreAge)
+    const compound = deg.compound
+    const urgency = getUrgency(deg.tyreAge, deg.cliffTyreLife)
     const compoundColor = COMPOUND_COLOR[compound] ?? 'var(--muted)'
 
-    // Shortened display label for compound
     const compoundLabel =
       compound === 'INTERMEDIATE' ? 'INTER'
       : compound === 'MEDIUM' ? 'MED'
       : compound
 
-    return { compound, compoundLabel, compoundColor, tyreAge, max, urgency }
-  }, [stints, laps])
+    return { compound, compoundLabel, compoundColor, tyreAge: deg.tyreAge, max: deg.cliffTyreLife, urgency }
+  }, [deg])
 
   // ── Guards ──────────────────────────────────────────────────────────────────
 
@@ -214,9 +193,9 @@ export function PitWindowUrgency({ widgetId }: { widgetId: string }) {
 
         <div style={{ width: 1, background: 'var(--border)', flexShrink: 0 }} />
 
-        {/* MAX */}
+        {/* CLIFF */}
         <StatCell
-          label="MAX ~"
+          label="CLIFF"
           value={`~${max}L`}
           color="var(--muted)"
         />
@@ -228,7 +207,7 @@ export function PitWindowUrgency({ widgetId }: { widgetId: string }) {
           fontFamily: 'var(--mono)', fontSize: 7, color: 'var(--muted2)',
           letterSpacing: '0.06em', fontStyle: 'italic',
         }}>
-          inferred from tyre data
+          cliff: live regression · temp {deg.trackTemp.toFixed(0)}°C · load {deg.paceIntensity.toFixed(2)}×
         </span>
       </div>
     </div>
