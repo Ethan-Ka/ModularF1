@@ -10,7 +10,7 @@ Six live weather metric cards for the circuit, with trend arrows showing recent 
 - **Wind direction** (°): Meteorological bearing — the direction the wind is coming *from*.
 - **Trend arrow**: ↑ increasing, ↓ decreasing, — stable since the last reading.
 
-Notes: weather data is polled from OpenF1 at a fixed interval and reflects official circuit weather station readings. Track temperature can be significantly higher than air temperature, especially in direct sunlight.
+Notes: weather data is polled from FastF1 at a fixed interval and reflects official circuit weather station readings. Track temperature can be significantly higher than air temperature, especially in direct sunlight.
 `
 import { useWeather } from '../../hooks/useWeather'
 import type { OpenF1Weather } from '../../api/openf1'

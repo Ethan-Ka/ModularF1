@@ -42,6 +42,7 @@ function buildStandings(
     return {
       driverNumber,
       driverId: ds.Driver.driverId,
+      constructorName: ds.Constructors[0]?.name ?? undefined,
       points: parseFloat(ds.points),
       wins: parseInt(ds.wins, 10),
       podiums,
@@ -66,6 +67,7 @@ export function useSeasonStandings(year = 2026) {
   const setStandings = useStandingsStore((s) => s.setStandings)
 
   const hasCachedStandings = cached.standings !== null && cached.year === year
+  const cachedHasConstructorNames = cached.standings?.every((standing) => !!standing.constructorName) ?? false
 
   const { data: standingsList, isLoading: standingsLoading } = useQuery({
     queryKey: ['jolpica-standings', year],
@@ -86,7 +88,9 @@ export function useSeasonStandings(year = 2026) {
   const apiRoundCount = standingsList ? parseInt(standingsList.round, 10) : 0
 
   const needsRefresh =
-    !hasCachedStandings || (standingsList !== undefined && apiRoundCount > cached.raceCount)
+    !hasCachedStandings
+    || !cachedHasConstructorNames
+    || (standingsList !== undefined && apiRoundCount > cached.raceCount)
 
   useEffect(() => {
     if (!needsRefresh) return

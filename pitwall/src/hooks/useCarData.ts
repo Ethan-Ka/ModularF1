@@ -1,48 +1,42 @@
-import { useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchCarData } from '../api/openf1'
+import { useMemo } from 'react'
 import type { OpenF1CarData } from '../api/openf1'
 import { useSessionStore } from '../store/sessionStore'
 import { useFakeTelemetryStore } from '../store/fakeTelemetryStore'
+import { useFastF1TelemetryLatest } from './useFastF1'
 
 // Incremental polling hook for /car_data, modelled after useLocation.
 // Only enabled in live mode — car data for a full historical session would be huge.
 export function useCarData(driverNumber?: number | null) {
-  const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
-  const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
   const mode = useSessionStore((s) => s.mode)
   const fakeEnabled = useFakeTelemetryStore((s) => s.enabled)
   const buildSample = useFakeTelemetryStore((s) => s.buildSample)
+  const fastf1Ref = useSessionStore((s) => s.activeFastF1Session)
+  const fastf1Available = useSessionStore((s) => s.fastf1ServerAvailable)
 
-  // date_gt cursor — advances each fetch to only pull new samples
-  const cursorRef = useRef<string | undefined>(undefined)
-  const latestRef = useRef<OpenF1CarData | null>(null)
+  const fastf1Query = useFastF1TelemetryLatest(
+    fastf1Available && !!fastf1Ref ? fastf1Ref : null,
+    driverNumber ?? undefined,
+  )
 
-  useEffect(() => {
-    cursorRef.current = undefined
-    latestRef.current = null
-  }, [sessionKey, driverNumber])
+  const normalized = useMemo<OpenF1CarData | null>(() => {
+    if (fakeEnabled && driverNumber) return buildSample(driverNumber)
+    const sample = fastf1Query.data?.[0]
+    if (!sample || driverNumber == null) return null
+    return {
+      driver_number: driverNumber,
+      speed: sample.Speed ?? 0,
+      throttle: sample.Throttle ?? 0,
+      brake: sample.Brake ? 100 : 0,
+      rpm: sample.RPM ?? 0,
+      n_gear: sample.nGear ?? 0,
+      drs: sample.DRS ?? 0,
+      date: sample.Date ?? new Date().toISOString(),
+      session_key: 0,
+    }
+  }, [fakeEnabled, driverNumber, buildSample, fastf1Query.data])
 
-  return useQuery({
-    queryKey: ['car_data', sessionKey, driverNumber, fakeEnabled],
-    queryFn: async () => {
-      if (fakeEnabled && driverNumber) {
-        return buildSample(driverNumber)
-      }
-
-      const raw = await fetchCarData(sessionKey!, driverNumber!, apiKey, cursorRef.current)
-
-      if (raw.length > 0) {
-        const newest = raw.reduce((a, b) => (a.date > b.date ? a : b))
-        latestRef.current = newest
-        cursorRef.current = newest.date
-      }
-
-      return latestRef.current
-    },
-    enabled: fakeEnabled ? !!driverNumber : (!!sessionKey && !!driverNumber && mode === 'live'),
-    staleTime: fakeEnabled ? Infinity : 3_000,
-    refetchInterval: fakeEnabled ? false : 5_000,
-    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
-  })
+  return {
+    ...fastf1Query,
+    data: normalized,
+  }
 }

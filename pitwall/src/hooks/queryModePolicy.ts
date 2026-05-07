@@ -14,7 +14,7 @@ export function queryModePolicy(
   live: LiveQueryPolicy,
   options?: { historicalStaleTime?: number }
 ) {
-  if (mode === 'historical') {
+  if (mode === 'hub') {
     return {
       staleTime: options?.historicalStaleTime ?? Infinity,
       gcTime: Infinity,

@@ -392,7 +392,7 @@ html, body {
   position: relative;
 }
 .react-grid-item {
-  transition: transform var(--motion-fast) var(--motion-spring);
+  transition: transform var(--motion-slow) var(--motion-out);
   z-index: 2;
 }
 .react-grid-item.react-draggable-dragging {

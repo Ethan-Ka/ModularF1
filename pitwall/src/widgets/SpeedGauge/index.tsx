@@ -1,4 +1,4 @@
-export const HELP = `# Speed Gauge
+﻿export const HELP = `# Speed Gauge
 
 Displays live telemetry for the selected driver: speed, gear, RPM, throttle, and brake.
 
@@ -14,7 +14,7 @@ Unfamiliar terms:
 - *DRS*: Drag Reduction System — a movable rear-wing flap opened on designated straights to reduce drag and increase speed. Indicated by the DRS badge.
 - *RPM*: Revolutions Per Minute — how fast the engine is spinning. F1 engines typically rev to around 15,000 rpm.
 
-Notes: in live mode data streams from OpenF1 car_data. In historical mode the last completed lap's telemetry is fetched via the FastF1 sidecar — FastF1 must be running for historical data to appear.
+Notes: in live mode data streams from FastF1 timing telemetry. In historical mode the last completed lap's telemetry is fetched via the FastF1 sidecar — FastF1 must be running for historical data to appear.
 `
 import { useMemo } from 'react'
 import { useCarData } from '../../hooks/useCarData'
@@ -82,11 +82,11 @@ export function SpeedGauge({ widgetId }: { widgetId: string }) {
   const driverAcronym = driver?.name_acronym
   const teamColor = driverNumber != null ? getTeamColor(driverNumber) : 'var(--purple)'
 
-  // --- Live path: OpenF1 car_data with incremental date_gt polling ---
+  // --- Live path: FastF1-derived telemetry samples ---
   const { data: liveData } = useCarData(mode === 'live' ? driverNumber : null)
 
   // --- Historical path: FastF1 telemetry for the last completed lap ---
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -115,7 +115,7 @@ export function SpeedGauge({ widgetId }: { widgetId: string }) {
     }
   }, [telemetry])
 
-  // Normalize live OpenF1 data to same shape
+  // Normalize live telemetry data to same shape
   const liveSample = useMemo((): NormalizedSample | null => {
     if (!liveData) return null
     return {
@@ -129,7 +129,7 @@ export function SpeedGauge({ widgetId }: { widgetId: string }) {
   }, [liveData])
 
   const sample = mode === 'live' ? liveSample : peakSample
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
 
   const refreshFade = useRefreshFade([liveData])
 

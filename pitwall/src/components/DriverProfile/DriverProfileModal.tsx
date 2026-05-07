@@ -63,6 +63,7 @@ function StatBox({
 export function DriverProfileModal({ driverNumber, onClose }: DriverProfileModalProps) {
   const EXIT_MS = 220
   const [isClosing, setIsClosing] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { getDriver, getTeamColor } = useDriverStore()
@@ -95,6 +96,10 @@ export function DriverProfileModal({ driverNumber, onClose }: DriverProfileModal
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [headshotUrl])
 
   const firstName = fullName.split(' ')[0]
   const lastName = fullName.split(' ').slice(1).join(' ')
@@ -156,7 +161,7 @@ export function DriverProfileModal({ driverNumber, onClose }: DriverProfileModal
               flexShrink: 0,
             }}
           >
-            {headshotUrl ? (
+            {headshotUrl && !imageFailed ? (
               <img
                 src={headshotUrl}
                 alt={code}
@@ -167,7 +172,7 @@ export function DriverProfileModal({ driverNumber, onClose }: DriverProfileModal
                   objectPosition: 'center top',
                 }}
                 onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
+                  setImageFailed(true)
                 }}
               />
             ) : (

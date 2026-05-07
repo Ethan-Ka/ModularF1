@@ -1,4 +1,4 @@
-export const HELP = `# Throttle Heatmap
+﻿export const HELP = `# Throttle Heatmap
 
 Visualises average throttle application across 16 equal time-buckets spanning the lap, using colour intensity to show aggression.
 
@@ -69,7 +69,7 @@ export function ThrottleHeatmap({ widgetId }: { widgetId: string }) {
   )
 
   // Historical path
-  const histEnabled = mode === 'historical' && fastf1Available && !!activeFastF1Session && !!driverAcronym
+  const histEnabled = mode === 'hub' && fastf1Available && !!activeFastF1Session && !!driverAcronym
   const { data: laps } = useFastF1Laps(histEnabled ? activeFastF1Session : null, driverAcronym)
 
   const lastLapNumber = useMemo(() => {
@@ -84,7 +84,7 @@ export function ThrottleHeatmap({ widgetId }: { widgetId: string }) {
     lastLapNumber,
   )
 
-  const isHistorical = mode === 'historical'
+  const isHistorical = mode === 'hub'
 
   // Buckets: live uses rolling buffer, historical uses full telemetry lap
   const buckets = useMemo((): number[] => {

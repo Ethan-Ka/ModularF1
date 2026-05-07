@@ -1,4 +1,4 @@
-import type { OpenF1Driver } from '../api/openf1'
+﻿import type { OpenF1Driver } from '../api/openf1'
 import type { WindowFocusSelector } from '../store/driverStore'
 import type { CanvasTab } from '../store/workspaceStore'
 
@@ -9,7 +9,7 @@ export type PitwallFileKind = 'settings' | 'season' | 'workspace' | 'bundle'
 export interface SettingsSnapshot {
   session: {
     apiKey: string | null
-    mode: 'live' | 'historical' | 'onboarding'
+    mode: 'live' | 'hub' | 'onboarding'
     apiRequestsEnabled: boolean
   }
   ambient: {
@@ -100,7 +100,7 @@ function hasSettingsSnapshot(value: unknown): value is SettingsSnapshot {
   if (!isObject(value.session) || !isObject(value.ambient) || !isObject(value.driver)) return false
 
   const sessionMode = value.session.mode
-  const isMode = sessionMode === 'live' || sessionMode === 'historical' || sessionMode === 'onboarding'
+  const isMode = sessionMode === 'live' || sessionMode === 'hub' || sessionMode === 'onboarding'
   if (!isMode) return false
   if (value.session.apiKey !== null && typeof value.session.apiKey !== 'string') return false
   if (typeof value.session.apiRequestsEnabled !== 'boolean') return false

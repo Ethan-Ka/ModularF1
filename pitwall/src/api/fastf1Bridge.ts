@@ -17,7 +17,15 @@ export interface FastF1Event {
   country: string
   date: string | null
   event_format: string
-  sessions: Array<{ type: string; name: string }>
+  sessions: Array<{ type: string; name: string; date_start?: string | null; date_end?: string | null }>
+}
+
+export interface FastF1Driver {
+  driver_number: number
+  name_acronym: string
+  full_name: string | null
+  team_name: string | null
+  team_colour: string | null
 }
 
 export interface FastF1Lap {
@@ -57,6 +65,28 @@ export interface FastF1TelemetrySample {
   X: number
   Y: number
   Z: number
+}
+
+export interface FastF1TimingRow {
+  driver_number: number
+  position: number
+  gap_to_leader: number
+  interval: number
+  lap_number: number
+  lap_time: number
+  sector1_time: number
+  sector2_time: number
+  sector3_time: number
+  time: number
+  date: string
+}
+
+export interface FastF1LocationSample {
+  driver_number: number
+  x: number
+  y: number
+  z: number
+  date: string
 }
 
 export interface FastF1Stint {
@@ -195,6 +225,15 @@ export function fetchFastF1Telemetry(ref: FastF1SessionRef, driver: string, lap?
   })
 }
 
+export function fetchFastF1TelemetryLatest(ref: FastF1SessionRef, driverNumber: number) {
+  return f1Fetch<FastF1TelemetrySample[]>('/telemetry/latest', {
+    year: ref.year,
+    round: ref.round,
+    session: ref.session,
+    driver_number: driverNumber,
+  })
+}
+
 export function fetchFastF1Stints(ref: FastF1SessionRef) {
   return f1Fetch<FastF1Stint[]>('/stints', {
     year: ref.year,
@@ -221,6 +260,30 @@ export function fetchFastF1RaceControl(ref: FastF1SessionRef) {
 
 export function fetchFastF1Results(ref: FastF1SessionRef) {
   return f1Fetch<FastF1Result[]>('/results', {
+    year: ref.year,
+    round: ref.round,
+    session: ref.session,
+  })
+}
+
+export function fetchFastF1Drivers(ref: FastF1SessionRef) {
+  return f1Fetch<FastF1Driver[]>('/drivers', {
+    year: ref.year,
+    round: ref.round,
+    session: ref.session,
+  })
+}
+
+export function fetchFastF1Timing(ref: FastF1SessionRef) {
+  return f1Fetch<FastF1TimingRow[]>('/timing', {
+    year: ref.year,
+    round: ref.round,
+    session: ref.session,
+  })
+}
+
+export function fetchFastF1Locations(ref: FastF1SessionRef) {
+  return f1Fetch<FastF1LocationSample[]>('/locations', {
     year: ref.year,
     round: ref.round,
     session: ref.session,

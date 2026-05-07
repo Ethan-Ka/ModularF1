@@ -1,6 +1,6 @@
 // OpenF1 API typed wrappers
 // Base URL: https://api.openf1.org/v1/
-// Live data requires Bearer token. Historical (2023+) is free.
+// Currently used only for team radio + session metadata mapping.
 
 import { useAmbientStore } from '../store/ambientStore'
 import { useSessionStore } from '../store/sessionStore'
@@ -168,71 +168,25 @@ async function openf1Fetch<T>(
   return res.json()
 }
 
-// --- Sessions ---
+export async function validateApiKey(
+  apiKey: string
+): Promise<'valid' | 'invalid' | 'forbidden' | 'rate_limited' | 'network_error'> {
+  try {
+    const url = `${BASE_URL}/sessions?year=2024&session_name=Race`
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
+    if (res.ok) return 'valid'
+    if (res.status === 401) return 'invalid'
+    if (res.status === 403) return 'forbidden'
+    if (res.status === 429) return 'rate_limited'
+    return 'network_error'
+  } catch {
+    return 'network_error'
+  }
+}
+
+// --- Sessions (used for team radio session-key mapping) ---
 export function fetchSessions(params?: { year?: number }, apiKey?: string) {
   return openf1Fetch<OpenF1Session>('/sessions', params ?? {}, apiKey)
-}
-
-export function fetchLatestSession(apiKey?: string) {
-  return openf1Fetch<OpenF1Session>('/sessions', { session_key: 'latest' }, apiKey)
-}
-
-// --- Drivers ---
-export function fetchDrivers(sessionKey: number, apiKey?: string) {
-  return openf1Fetch<OpenF1Driver>('/drivers', { session_key: sessionKey }, apiKey)
-}
-
-// --- Laps ---
-export function fetchLaps(sessionKey: number, driverNumber?: number, apiKey?: string) {
-  return openf1Fetch<OpenF1Lap>('/laps', { session_key: sessionKey, driver_number: driverNumber }, apiKey)
-}
-
-// --- Intervals ---
-export function fetchIntervals(sessionKey: number, apiKey?: string) {
-  return openf1Fetch<OpenF1Interval>('/intervals', { session_key: sessionKey }, apiKey)
-}
-
-// --- Positions ---
-export function fetchPositions(sessionKey: number, apiKey?: string) {
-  return openf1Fetch<OpenF1Position>('/position', { session_key: sessionKey }, apiKey)
-}
-
-// --- Weather ---
-export function fetchWeather(sessionKey: number, apiKey?: string) {
-  return openf1Fetch<OpenF1Weather>('/weather', { session_key: sessionKey }, apiKey)
-}
-
-// --- Race Control ---
-export function fetchRaceControl(sessionKey: number, apiKey?: string) {
-  return openf1Fetch<OpenF1RaceControl>('/race_control', { session_key: sessionKey }, apiKey)
-}
-
-// --- Stints ---
-export function fetchStints(sessionKey: number, driverNumber?: number, apiKey?: string) {
-  return openf1Fetch<OpenF1Stint>('/stints', { session_key: sessionKey, driver_number: driverNumber }, apiKey)
-}
-
-// --- Location ---
-export function fetchLocations(sessionKey: number, driverNumber?: number, apiKey?: string, date_gt?: string) {
-  return openf1Fetch<OpenF1Location>('/location', {
-    session_key: sessionKey,
-    driver_number: driverNumber,
-    ...(date_gt ? { 'date>': date_gt } : {}),
-  }, apiKey)
-}
-
-// --- Car Data ---
-export function fetchCarData(sessionKey: number, driverNumber?: number, apiKey?: string, date_gt?: string) {
-  return openf1Fetch<OpenF1CarData>('/car_data', {
-    session_key: sessionKey,
-    driver_number: driverNumber,
-    ...(date_gt ? { 'date>': date_gt } : {}),
-  }, apiKey)
-}
-
-// --- Meetings ---
-export function fetchMeetings(params?: { year?: number }, apiKey?: string) {
-  return openf1Fetch<OpenF1Meeting>('/meetings', params ?? {}, apiKey)
 }
 
 // --- Team Radio ---
@@ -246,18 +200,4 @@ export interface OpenF1TeamRadio {
 
 export function fetchTeamRadio(sessionKey: number, driverNumber?: number, apiKey?: string) {
   return openf1Fetch<OpenF1TeamRadio>('/team_radio', { session_key: sessionKey, driver_number: driverNumber }, apiKey)
-}
-
-// Validate an API key by probing /sessions?session_key=latest
-export async function validateApiKey(key: string): Promise<'valid' | 'invalid' | 'forbidden' | 'rate_limited' | 'error'> {
-  try {
-    await fetchLatestSession(key)
-    return 'valid'
-  } catch (err: any) {
-    const status = err?.status
-    if (status === 401) return 'invalid'
-    if (status === 403) return 'forbidden'
-    if (status === 429) return 'rate_limited'
-    return 'error'
-  }
 }

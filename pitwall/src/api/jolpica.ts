@@ -54,6 +54,26 @@ export async function fetchJolpicaDriverStandings(year: number): Promise<Jolpica
   return data?.MRData?.StandingsTable?.StandingsLists?.[0] ?? null
 }
 
+export interface JolpicaConstructorStanding {
+  position: string
+  points: string
+  wins: string
+  Constructor: { constructorId: string; name: string; nationality: string }
+}
+
+export interface JolpicaConstructorStandingsList {
+  season: string
+  round: string
+  ConstructorStandings: JolpicaConstructorStanding[]
+}
+
+export async function fetchJolpicaConstructorStandings(year: number): Promise<JolpicaConstructorStandingsList | null> {
+  const res = await fetch(`${BASE}/${year}/constructorstandings.json`)
+  if (!res.ok) throw jolpicaError('constructorstandings', res.status)
+  const data = await res.json()
+  return data?.MRData?.StandingsTable?.StandingsLists?.[0] ?? null
+}
+
 export async function fetchJolpicaRaceResults(year: number): Promise<JolpicaRace[]> {
   const res = await fetch(`${BASE}/${year}/results.json?limit=100`)
   if (!res.ok) throw jolpicaError('results', res.status)

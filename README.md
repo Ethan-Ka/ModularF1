@@ -5,12 +5,12 @@
 </p>
 
 <p align="center">
-  <strong>Fan-built F1 race intelligence platform powered by OpenF1</strong><br/>
+  <strong>Fan-built F1 race intelligence platform</strong><br/>
   Real-time telemetry, inferred strategy metrics, ambient race state UI, and shareable multi-canvas layouts.
 </p>
 
 <p align="center">
-  <img alt="Status" src="https://img.shields.io/badge/status-alpha_v0.2.5-E8132B" />
+  <img alt="Status" src="https://img.shields.io/badge/status-alpha_v0.3.0-E8132B" />
   <img alt="Stack" src="https://img.shields.io/badge/stack-React%20%7C%20TypeScript%20%7C%20Vite-1AACB8" />
   <img alt="Data" src="https://img.shields.io/badge/data-OpenF1-3671C6" />
   <img alt="Data" src="https://img.shields.io/badge/data-FastF1-3671C6" />
@@ -92,6 +92,13 @@ Pitwall uses a 24-column drag-and-drop grid. Widgets can be freely repositioned 
 - **Resize**: Drag the southeast corner of any widget. Minimum dimensions are enforced per widget type.
 - **Pop out**: Widgets can be detached into their own window on Electron builds.
 
+### Widget Examples
+
+| Sector Mini Cards | Strategy Timeline |
+|---|---|
+| ![Sector Mini Cards](plan/demo/sectorMiniCards.png) | ![Strategy Timeline](plan/demo/strategyTimeline.png) | 
+| **Pitstop Log** | **Tire Status** |
+| ![Pitstop Log](plan/demo/pitstoplog.png) | ![Tire Status](plan/demo/inference.png) |
 ---
 
 ## Driver targeting system
@@ -112,15 +119,19 @@ Every focus-enabled widget has a **driver context** — a mode that determines w
 
 Multiple instances of the same widget can run on the same canvas, each targeting a different driver. The badge in each widget header shows which mode is active and which driver is resolved.
 
-| Driver manager and starring | Same widget type, different driver targets |
-|---|---|
-| ![Driver Manager](plan/demo/driverManager.png) | ![Driver Select and Individual](plan/demo/driverSelectAndIndividual.png) |
+| Same widget type, different driver targets |
+|---|
+| ![Driver Select and Individual](plan/demo/driverSelectAndIndividual.png) |
 
 ---
 
 ## Driver manager
 
 The driver manager is the central hub for driver configuration. It handles season data, starred drivers, canvas focus, and team color overrides.
+
+| Driver Manager |
+| --- |
+|![Driver Manager](plan/demo/driverManager.png)|
 
 | Feature | Description |
 |---|---|

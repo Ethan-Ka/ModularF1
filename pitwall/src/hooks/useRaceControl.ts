@@ -1,11 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { useMemo, useEffect, useRef } from 'react'
-import { fetchRaceControl } from '../api/openf1'
+﻿import { useMemo, useEffect, useRef } from 'react'
 import { useSessionStore } from '../store/sessionStore'
 import { useAmbientStore } from '../store/ambientStore'
 import type { FlagState } from '../store/ambientStore'
-import { queryModePolicy } from './queryModePolicy'
-import { readSessionData, writeSessionData, isSessionDataComplete } from '../lib/f1PersistentStore'
 import type { OpenF1RaceControl } from '../api/openf1'
 import type { FastF1RaceControlMessage } from '../api/fastf1Bridge'
 import { useFastF1RaceControl } from './useFastF1'
@@ -50,38 +46,12 @@ function normalizeFastF1(msg: FastF1RaceControlMessage): OpenF1RaceControl {
 }
 
 export function useRaceControl() {
-  const apiKey = useSessionStore((s) => s.apiKey) ?? undefined
-  const sessionKey = useSessionStore((s) => s.activeSession?.session_key)
-  const mode = useSessionStore((s) => s.mode)
-  const dataSource = useSessionStore((s) => s.dataSource)
   const fastf1Available = useSessionStore((s) => s.fastf1ServerAvailable)
   const activeFastF1Session = useSessionStore((s) => s.activeFastF1Session)
   const setFlagState = useAmbientStore((s) => s.setFlagState)
   const lastProcessedRef = useRef<string>('')
 
-  const usingFastF1 = dataSource === 'fastf1' && fastf1Available && !!activeFastF1Session
-
-  const openF1Query = useQuery({
-    queryKey: ['race_control', sessionKey],
-    queryFn: async () => {
-      const key = sessionKey!
-      const complete = await isSessionDataComplete('race_control', key)
-      if (complete) {
-        const stored = await readSessionData<OpenF1RaceControl>('race_control', key)
-        if (stored.length > 0) return stored
-      }
-      const data = await fetchRaceControl(key, apiKey)
-      void writeSessionData('race_control', key, data, mode === 'historical')
-      return data
-    },
-    enabled: !!sessionKey && !usingFastF1,
-    ...queryModePolicy(mode, {
-      staleTime: 10_000,
-      refetchInterval: 10_000,
-    }),
-    retry: (failureCount, error) => (error as any)?.status !== 429 && failureCount < 2,
-  })
-
+  const usingFastF1 = fastf1Available && !!activeFastF1Session
   const fastf1Query = useFastF1RaceControl(usingFastF1 ? activeFastF1Session : null)
 
   const fastf1Data = useMemo(
@@ -89,7 +59,7 @@ export function useRaceControl() {
     [fastf1Query.data]
   )
 
-  const data = usingFastF1 ? fastf1Data : openF1Query.data
+  const data = fastf1Data
 
   useEffect(() => {
     if (!data?.length) return
@@ -104,8 +74,8 @@ export function useRaceControl() {
 
   return {
     data,
-    isLoading: usingFastF1 ? fastf1Query.isLoading : openF1Query.isLoading,
-    isFetching: usingFastF1 ? fastf1Query.isFetching : openF1Query.isFetching,
-    error: usingFastF1 ? fastf1Query.error : openF1Query.error,
+    isLoading: fastf1Query.isLoading,
+    isFetching: fastf1Query.isFetching,
+    error: fastf1Query.error,
   }
 }

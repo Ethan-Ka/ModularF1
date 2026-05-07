@@ -1,12 +1,13 @@
 import type { ComponentType } from 'react'
 import { LapDeltaTower, HELP as LapDeltaTower_HELP } from './LapDeltaTower'
+import { RunningOrderStrip, HELP as RunningOrderStrip_HELP } from './RunningOrderStrip'
 import { RaceControlFeed, HELP as RaceControlFeed_HELP } from './RaceControlFeed'
 import { WeatherDashboard, HELP as WeatherDashboard_HELP } from './WeatherDashboard'
 import { TyreIntelligence, HELP as TyreIntelligence_HELP } from './TyreIntelligence'
 import { FullTrackMap, HELP as FullTrackMap_HELP } from './FullTrackMap'
 import { WeatherRadar, HELP as WeatherRadar_HELP } from './WeatherRadar'
 import { StandingsBoard, HELP as StandingsBoard_HELP } from './StandingsBoard'
-
+import { LiveLapTimeCard, HELP as LiveLapTimeCard_HELP } from './LiveLapTimeCard'
 import { LastLapCard, HELP as LastLapCard_HELP } from './LastLapCard'
 import { StintPaceComparison, HELP as StintPaceComparison_HELP } from './StintPaceComparison'
 import { SectorMiniCards, HELP as SectorMiniCards_HELP } from './SectorMiniCards'
@@ -15,13 +16,21 @@ import { TrackTempEvolution, HELP as TrackTempEvolution_HELP } from './TrackTemp
 import { RadioScanner, HELP as RadioScanner_HELP } from './RadioScanner'
 import { RadioFeedText, HELP as RadioFeedText_HELP } from './RadioFeedText'
 import { SpeedGauge, HELP as SpeedGauge_HELP } from './SpeedGauge'
+import { ERSMicroSectors, HELP as ERSMicroSectors_HELP } from './ERSMicroSectors'
+import { DRSEfficiency, HELP as DRSEfficiency_HELP } from './DRSEfficiency'
+import { EngineModeTracker, HELP as EngineModeTracker_HELP } from './EngineModeTracker'
 import { HeadToHeadDelta, HELP as HeadToHeadDelta_HELP } from './HeadToHeadDelta'
+import { ThrottleBrakeTrace, HELP as ThrottleBrakeTrace_HELP } from './ThrottleBrakeTrace'
+import { GearTrace, HELP as GearTrace_HELP } from './GearTrace'
 import { ThrottleHeatmap, HELP as ThrottleHeatmap_HELP } from './ThrottleHeatmap'
 import { StrategyTimeline, HELP as StrategyTimeline_HELP } from './StrategyTimeline'
 import { DegRateGraph, HELP as DegRateGraph_HELP } from './DegRateGraph'
+import { PitWindowUrgency, HELP as PitWindowUrgency_HELP } from './PitWindowUrgency'
 import { PitStopLog, HELP as PitStopLog_HELP } from './PitStopLog'
 import { UndercutSimulator, HELP as UndercutSimulator_HELP } from './UndercutSimulator'
-
+import { SectorMap, HELP as SectorMap_HELP } from './SectorMap'
+import { OvertakeReplay, HELP as OvertakeReplay_HELP } from './OvertakeReplay'
+import { WindDirection, HELP as WindDirection_HELP } from './WindDirection'
 import { StandingsTable, HELP as StandingsTable_HELP } from './StandingsTable'
 import { ChampionshipCalculator, HELP as ChampionshipCalculator_HELP } from './ChampionshipCalculator'
 import { PointsDeltaTracker, HELP as PointsDeltaTracker_HELP } from './PointsDeltaTracker'
@@ -77,7 +86,17 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minH: 3,
     component: LastLapCard,
   },
-
+  {
+    type: 'LiveLapTimeCard',
+    label: 'Lap Time Card',
+    description: 'Shows the live running lap timer for the focused driver (no completed lap fallback)',
+    help: LiveLapTimeCard_HELP,
+    category: 'Timing',
+    color: 'var(--red)',
+    defaultSize: { w: 4, h: 3 },
+    minH: 2,
+    component: LiveLapTimeCard,
+  },
   {
     type: 'GapEvolutionChart',
     label: 'Gap Evolution Chart',
@@ -123,6 +142,28 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     component: SpeedGauge,
   },
   {
+    type: 'ThrottleBrakeTrace',
+    label: 'Throttle / Brake Trace',
+    description: 'Pedal input timeline for focused driver',
+    help: ThrottleBrakeTrace_HELP,
+    category: 'Telemetry',
+    color: 'var(--purple)',
+    defaultSize: { w: 8, h: 4 },
+    minH: 4,
+    component: ThrottleBrakeTrace,
+  },
+  {
+    type: 'GearTrace',
+    label: 'Gear Trace',
+    description: 'Rolling gear selection trace over time',
+    help: GearTrace_HELP,
+    category: 'Telemetry',
+    color: 'var(--purple)',
+    defaultSize: { w: 8, h: 5 },
+    minH: 3,
+    component: GearTrace,
+  },
+  {
     type: 'ThrottleHeatmap',
     label: 'Throttle Heatmap',
     description: 'Lap segment throttle intensity heatmap',
@@ -133,7 +174,39 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minH: 3,
     component: ThrottleHeatmap,
   },
-
+  {
+    type: 'ERSMicroSectors',
+    label: 'ERS Micro-Sectors',
+    description: 'Inferred ERS deployment by micro-sector',
+    help: ERSMicroSectors_HELP,
+    category: 'Telemetry',
+    color: 'var(--purple)',
+    defaultSize: { w: 8, h: 5 },
+    minH: 3,
+    component: ERSMicroSectors,
+  },
+  {
+    type: 'DRSEfficiency',
+    label: 'DRS Efficiency',
+    description: 'Inferred open-vs-closed DRS delta metric',
+    help: DRSEfficiency_HELP,
+    category: 'Telemetry',
+    color: 'var(--purple)',
+    defaultSize: { w: 4, h: 4 },
+    minH: 3,
+    component: DRSEfficiency,
+  },
+  {
+    type: 'EngineModeTracker',
+    label: 'Engine Mode Tracker',
+    description: 'Inferred power mode behavior tracker',
+    help: EngineModeTracker_HELP,
+    category: 'Telemetry',
+    color: 'var(--purple)',
+    defaultSize: { w: 4, h: 5 },
+    minH: 3,
+    component: EngineModeTracker,
+  },
   {
     type: 'CarVisualization',
     label: 'Car Visualization',
@@ -141,10 +214,22 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     help: CarVisualization_HELP,
     category: 'Telemetry',
     color: 'var(--purple)',
-    defaultSize: { w: 10, h: 8 },
+    defaultSize: { w: 10, h: 7 },
     minH: 3,
     minW: 10,
     component: CarVisualization,
+  },
+  {
+    type: 'RunningOrderStrip',
+    label: 'Running Order Strip',
+    description: 'Horizontal dot row of all 20 drivers by position',
+    help: RunningOrderStrip_HELP,
+    category: 'Race Control',
+    color: 'var(--orange)',
+    defaultSize: { w: 24, h: 2 },
+    minH: 1,
+    fitContent: false,
+    component: RunningOrderStrip,
   },
   {
     type: 'RaceControlFeed',
@@ -190,6 +275,17 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     defaultSize: { w: 8, h: 7 },
     minH: 7,
     component: DegRateGraph,
+  },
+  {
+    type: 'PitWindowUrgency',
+    label: 'Pit Window Urgency',
+    description: 'Inferred urgency signal for next stop window',
+    help: PitWindowUrgency_HELP,
+    category: 'Strategy',
+    color: 'var(--gold)',
+    defaultSize: { w: 4, h: 5 },
+    minH: 5,
+    component: PitWindowUrgency,
   },
   {
     type: 'PitStopLog',
@@ -246,7 +342,17 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minH: 5,
     component: TrackTempEvolution,
   },
-
+  {
+    type: 'WindDirection',
+    label: 'Wind Direction',
+    description: 'Wind direction and drift changes by heading',
+    help: WindDirection_HELP,
+    category: 'Weather',
+    color: 'var(--blue)',
+    defaultSize: { w: 4, h: 7 },
+    minH: 7,
+    component: WindDirection,
+  },
   {
     type: 'WeatherRadar',
     label: 'Weather Radar',
@@ -269,7 +375,28 @@ export const WIDGET_MANIFEST: WidgetManifestEntry[] = [
     minH: 3,
     component: FullTrackMap,
   },
-
+  {
+    type: 'SectorMap',
+    label: 'Sector Map',
+    description: 'Track sectors with driver position context',
+    help: SectorMap_HELP,
+    category: 'Track',
+    color: 'var(--green)',
+    defaultSize: { w: 9, h: 11 },
+    minH: 3,
+    component: SectorMap,
+  },
+  {
+    type: 'OvertakeReplay',
+    label: 'Overtake Replay',
+    description: 'Historic overtake events and replay timeline',
+    help: OvertakeReplay_HELP,
+    category: 'Track',
+    color: 'var(--green)',
+    defaultSize: { w: 8, h: 8 },
+    minH: 3,
+    component: OvertakeReplay,
+  },
   {
     type: 'RadioScanner',
     label: 'Radio Scanner',

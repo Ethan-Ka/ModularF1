@@ -1,28 +1,307 @@
 {
   "season": 2026,
   "rounds": [
-    { "round": 1,  "name": "Australian Grand Prix",       "circuit": "Albert Park",                   "location": "Melbourne, Australia",    "file": "melbourne",   "format": "svg", "openf1Names": ["Melbourne"],                                     "displayRotation": 0, "detailRotation": 90 },
-    { "round": 2,  "name": "Chinese Grand Prix",          "circuit": "Shanghai International Circuit", "location": "Shanghai, China",         "file": "shanghai",    "format": "svg", "openf1Names": ["Shanghai"],                                      "displayRotation": 0, "detailRotation": 0 },
-    { "round": 3,  "name": "Japanese Grand Prix",         "circuit": "Suzuka Circuit",                 "location": "Suzuka, Japan",           "file": "suzuka",      "format": "svg", "openf1Names": ["Suzuka"],                                        "displayRotation": 0, "detailRotation": 0 },
-    { "round": 4,  "name": "Miami Grand Prix",            "circuit": "Miami International Autodrome",  "location": "Miami, USA",              "file": "miami",       "format": "svg", "openf1Names": ["Miami"],                                         "displayRotation": 0, "detailRotation": 0 },
-    { "round": 5,  "name": "Canadian Grand Prix",         "circuit": "Circuit Gilles Villeneuve",      "location": "Montreal, Canada",        "file": "montreal",    "format": "svg", "openf1Names": ["Montreal"],                                      "displayRotation": 0, "detailRotation": 0 },
-    { "round": 6,  "name": "Monaco Grand Prix",           "circuit": "Circuit de Monaco",              "location": "Monte Carlo, Monaco",     "file": "monaco",      "format": "svg", "openf1Names": ["Monaco"],                                        "displayRotation": 0, "detailRotation": 0 },
-    { "round": 7,  "name": "Spanish Grand Prix",          "circuit": "Circuit de Barcelona-Catalunya", "location": "Barcelona, Spain",        "file": "barcelona",   "format": "svg", "openf1Names": ["Barcelona"],                                     "displayRotation": 0, "detailRotation": 0 },
-    { "round": 8,  "name": "Austrian Grand Prix",         "circuit": "Red Bull Ring",                  "location": "Spielberg, Austria",      "file": "spielberg",   "format": "png", "openf1Names": ["Spielberg", "Red Bull Ring"],                     "displayRotation": 0, "detailRotation": 0 },
-    { "round": 9,  "name": "British Grand Prix",          "circuit": "Silverstone Circuit",            "location": "Silverstone, UK",         "file": "silverstone", "format": "svg", "openf1Names": ["Silverstone"],                                   "displayRotation": 0, "detailRotation": 0 },
-    { "round": 10, "name": "Belgian Grand Prix",          "circuit": "Circuit de Spa-Francorchamps",   "location": "Spa, Belgium",            "file": "spa",         "format": "svg", "openf1Names": ["Spa", "Spa-Francorchamps"],                       "displayRotation": 0, "detailRotation": 0 },
-    { "round": 11, "name": "Hungarian Grand Prix",        "circuit": "Hungaroring",                    "location": "Budapest, Hungary",       "file": "budapest",    "format": "svg", "openf1Names": ["Hungaroring", "Budapest"],                        "displayRotation": 0, "detailRotation": 0 },
-    { "round": 12, "name": "Dutch Grand Prix",            "circuit": "Circuit Zandvoort",              "location": "Zandvoort, Netherlands",  "file": "zandvoort",   "format": "png", "openf1Names": ["Zandvoort"],                                     "displayRotation": 0, "detailRotation": 0 },
-    { "round": 13, "name": "Italian Grand Prix",          "circuit": "Autodromo Nazionale Monza",      "location": "Monza, Italy",            "file": "monza",       "format": "svg", "openf1Names": ["Monza"],                                         "displayRotation": 0, "detailRotation": 0 },
-    { "round": 14, "name": "Spanish Grand Prix (Madrid)", "circuit": "Madrid Street Circuit",          "location": "Madrid, Spain",           "file": null,          "format": null,  "openf1Names": ["Madrid"],                                        "displayRotation": 0, "detailRotation": 0, "note": "New 2026 circuit — no layout available yet" },
-    { "round": 15, "name": "Azerbaijan Grand Prix",       "circuit": "Baku City Circuit",              "location": "Baku, Azerbaijan",        "file": "baku",        "format": "png", "openf1Names": ["Baku", "Baku City Circuit"],                      "displayRotation": 0, "detailRotation": 0 },
-    { "round": 16, "name": "Singapore Grand Prix",        "circuit": "Marina Bay Street Circuit",      "location": "Singapore",               "file": "singapore",   "format": "svg", "openf1Names": ["Singapore"],                                     "displayRotation": 0, "detailRotation": 0 },
-    { "round": 17, "name": "United States Grand Prix",    "circuit": "Circuit of the Americas",        "location": "Austin, USA",             "file": "austin",      "format": "svg", "openf1Names": ["Austin"],                                        "displayRotation": 0, "detailRotation": 0 },
-    { "round": 18, "name": "Mexico City Grand Prix",      "circuit": "Autodromo Hermanos Rodriguez",   "location": "Mexico City, Mexico",     "file": "mexico_city", "format": "svg", "openf1Names": ["Mexico City"],                                   "displayRotation": 0, "detailRotation": 0 },
-    { "round": 19, "name": "Brazilian Grand Prix",        "circuit": "Autodromo Jose Carlos Pace",     "location": "São Paulo, Brazil",       "file": "sao_paulo",   "format": "svg", "openf1Names": ["São Paulo", "Interlagos", "Sao Paulo"],           "displayRotation": 0, "detailRotation": 0 },
-    { "round": 20, "name": "Las Vegas Grand Prix",        "circuit": "Las Vegas Street Circuit",       "location": "Las Vegas, USA",          "file": "las_vegas",   "format": "svg", "openf1Names": ["Las Vegas"],                                     "displayRotation": 0, "detailRotation": 0 },
-    { "round": 21, "name": "Qatar Grand Prix",            "circuit": "Lusail International Circuit",   "location": "Lusail, Qatar",           "file": "lusail",      "format": "svg", "openf1Names": ["Lusail"],                                        "displayRotation": 0, "detailRotation": 0 },
-    { "round": 22, "name": "Abu Dhabi Grand Prix",        "circuit": "Yas Marina Circuit",             "location": "Abu Dhabi, UAE",          "file": "abu_dhabi",   "format": "png", "openf1Names": ["Yas Marina", "Abu Dhabi"],                        "displayRotation": 0, "detailRotation": 0 }
+    {
+      "round": 1,
+      "name": "Australian Grand Prix",
+      "circuit": "Albert Park",
+      "location": "Melbourne, Australia",
+      "file": "melbourne",
+      "format": "svg",
+      "openf1Names": [
+        "Melbourne"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 42.2
+    },
+    {
+      "round": 2,
+      "name": "Chinese Grand Prix",
+      "circuit": "Shanghai International Circuit",
+      "location": "Shanghai, China",
+      "file": "shanghai",
+      "format": "svg",
+      "openf1Names": [
+        "Shanghai"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -118.1
+    },
+    {
+      "round": 3,
+      "name": "Japanese Grand Prix",
+      "circuit": "Suzuka Circuit",
+      "location": "Suzuka, Japan",
+      "file": "suzuka",
+      "format": "svg",
+      "openf1Names": [
+        "Suzuka"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 0.0
+    },
+    {
+      "round": 4,
+      "name": "Miami Grand Prix",
+      "circuit": "Miami International Autodrome",
+      "location": "Miami, USA",
+      "file": "miami",
+      "format": "svg",
+      "openf1Names": [
+        "Miami"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 0
+    },
+    {
+      "round": 5,
+      "name": "Canadian Grand Prix",
+      "circuit": "Circuit Gilles Villeneuve",
+      "location": "Montreal, Canada",
+      "file": "montreal",
+      "format": "svg",
+      "openf1Names": [
+        "Montreal"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 62.8
+    },
+    {
+      "round": 6,
+      "name": "Monaco Grand Prix",
+      "circuit": "Circuit de Monaco",
+      "location": "Monte Carlo, Monaco",
+      "file": "monaco",
+      "format": "svg",
+      "openf1Names": [
+        "Monaco"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -49.0
+    },
+    {
+      "round": 7,
+      "name": "Spanish Grand Prix",
+      "circuit": "Circuit de Barcelona-Catalunya",
+      "location": "Barcelona, Spain",
+      "file": "barcelona",
+      "format": "svg",
+      "openf1Names": [
+        "Barcelona"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -57.6
+    },
+    {
+      "round": 8,
+      "name": "Austrian Grand Prix",
+      "circuit": "Red Bull Ring",
+      "location": "Spielberg, Austria",
+      "file": "spielberg",
+      "format": "png",
+      "openf1Names": [
+        "Spielberg",
+        "Red Bull Ring"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 19.9
+    },
+    {
+      "round": 9,
+      "name": "British Grand Prix",
+      "circuit": "Silverstone Circuit",
+      "location": "Silverstone, UK",
+      "file": "silverstone",
+      "format": "svg",
+      "openf1Names": [
+        "Silverstone"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -85.6
+    },
+    {
+      "round": 10,
+      "name": "Belgian Grand Prix",
+      "circuit": "Circuit de Spa-Francorchamps",
+      "location": "Spa, Belgium",
+      "file": "spa",
+      "format": "svg",
+      "openf1Names": [
+        "Spa",
+        "Spa-Francorchamps"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 88.4
+    },
+    {
+      "round": 11,
+      "name": "Hungarian Grand Prix",
+      "circuit": "Hungaroring",
+      "location": "Budapest, Hungary",
+      "file": "budapest",
+      "format": "svg",
+      "openf1Names": [
+        "Hungaroring",
+        "Budapest"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -66.5
+    },
+    {
+      "round": 12,
+      "name": "Dutch Grand Prix",
+      "circuit": "Circuit Zandvoort",
+      "location": "Zandvoort, Netherlands",
+      "file": "zandvoort",
+      "format": "png",
+      "openf1Names": [
+        "Zandvoort"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 170.5
+    },
+    {
+      "round": 13,
+      "name": "Italian Grand Prix",
+      "circuit": "Autodromo Nazionale Monza",
+      "location": "Monza, Italy",
+      "file": "monza",
+      "format": "svg",
+      "openf1Names": [
+        "Monza"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 95.4
+    },
+    {
+      "round": 14,
+      "name": "Spanish Grand Prix (Madrid)",
+      "circuit": "Madrid Street Circuit",
+      "location": "Madrid, Spain",
+      "file": null,
+      "format": null,
+      "openf1Names": [
+        "Madrid"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 0,
+      "note": "New 2026 circuit — no layout available yet"
+    },
+    {
+      "round": 15,
+      "name": "Azerbaijan Grand Prix",
+      "circuit": "Baku City Circuit",
+      "location": "Baku, Azerbaijan",
+      "file": "baku",
+      "format": "png",
+      "openf1Names": [
+        "Baku",
+        "Baku City Circuit"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -54.4
+    },
+    {
+      "round": 16,
+      "name": "Singapore Grand Prix",
+      "circuit": "Marina Bay Street Circuit",
+      "location": "Singapore",
+      "file": "singapore",
+      "format": "svg",
+      "openf1Names": [
+        "Singapore"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 0.4
+    },
+    {
+      "round": 17,
+      "name": "United States Grand Prix",
+      "circuit": "Circuit of the Americas",
+      "location": "Austin, USA",
+      "file": "austin",
+      "format": "svg",
+      "openf1Names": [
+        "Austin"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -4.4
+    },
+    {
+      "round": 18,
+      "name": "Mexico City Grand Prix",
+      "circuit": "Autodromo Hermanos Rodriguez",
+      "location": "Mexico City, Mexico",
+      "file": "mexico_city",
+      "format": "svg",
+      "openf1Names": [
+        "Mexico City"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 10.1
+    },
+    {
+      "round": 19,
+      "name": "Brazilian Grand Prix",
+      "circuit": "Autodromo Jose Carlos Pace",
+      "location": "São Paulo, Brazil",
+      "file": "sao_paulo",
+      "format": "svg",
+      "openf1Names": [
+        "São Paulo",
+        "Interlagos",
+        "Sao Paulo"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -95.9
+    },
+    {
+      "round": 20,
+      "name": "Las Vegas Grand Prix",
+      "circuit": "Las Vegas Street Circuit",
+      "location": "Las Vegas, USA",
+      "file": "las_vegas",
+      "format": "svg",
+      "openf1Names": [
+        "Las Vegas"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 92.7
+    },
+    {
+      "round": 21,
+      "name": "Qatar Grand Prix",
+      "circuit": "Lusail International Circuit",
+      "location": "Lusail, Qatar",
+      "file": "lusail",
+      "format": "svg",
+      "openf1Names": [
+        "Lusail"
+      ],
+      "displayRotation": 0,
+      "detailRotation": 69.9
+    },
+    {
+      "round": 22,
+      "name": "Abu Dhabi Grand Prix",
+      "circuit": "Yas Marina Circuit",
+      "location": "Abu Dhabi, UAE",
+      "file": "abu_dhabi",
+      "format": "png",
+      "openf1Names": [
+        "Yas Marina",
+        "Abu Dhabi"
+      ],
+      "displayRotation": 0,
+      "detailRotation": -95.6
+    }
   ],
-  "sprints": [2, 4, 5, 9, 12, 16]
+  "sprints": [
+    2,
+    4,
+    5,
+    9,
+    12,
+    16
+  ]
 }
