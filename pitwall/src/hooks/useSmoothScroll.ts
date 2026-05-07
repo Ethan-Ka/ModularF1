@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 
-const EASE = 0.09
-const FACTOR = 0.72
+// EASE=0.18 closes ~90% of the gap in ~12 frames (~200ms at 60fps) vs 25+ frames at 0.09.
+// This keeps the animation feeling smooth without occupying the main thread for long.
+const EASE = 0.18
+const FACTOR = 0.82
 
 interface ScrollState {
   target: number
@@ -44,7 +46,7 @@ function animateScroll(el: Element): void {
   if (!state) return
 
   const diff = state.target - state.current
-  if (Math.abs(diff) < 0.5) {
+  if (Math.abs(diff) < 1.5) {
     el.scrollTop = state.target
     state.current = state.target
     state.rafId = null

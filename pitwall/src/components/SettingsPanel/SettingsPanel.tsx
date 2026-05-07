@@ -23,6 +23,7 @@ import {
   type WorkspaceSnapshot,
 } from '../../lib/pitwallFiles'
 import { APP_VERSION_LABEL } from '../../lib/appMeta'
+import { SmoothScrollContainer } from '../SmoothScrollContainer'
 
 interface SettingsPanelProps {
   onClose: () => void
@@ -252,8 +253,14 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { resetToDefault } = useWorkspaceStore()
   const starredCount = useDriverStore((s) => s.starred.length)
   const seasonYear = useDriverStore((s) => s.seasonYear)
+  const windowFocusSelector = useDriverStore((s) => s.windowFocusSelector)
+  const setWindowFocusSelector = useDriverStore((s) => s.setWindowFocusSelector)
+  const teamColorOverrides = useDriverStore((s) => s.teamColorOverrides)
+  const clearTeamColorForTeam = useDriverStore((s) => s.clearTeamColorForTeam)
   const logEntries = useLogStore((s) => s.entries)
   const clearLogs = useLogStore((s) => s.clear)
+
+  const overrideCount = Object.keys(teamColorOverrides).length
 
   const [f1tvAuthPending, setF1tvAuthPending] = useState(false)
   const [f1tvAuthLoginUrl, setF1tvAuthLoginUrl] = useState<string | null>(null)
@@ -606,15 +613,55 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         </div>
 
         {/* Body */}
-        <div className="scroll-fade scroll-fade-top-only" style={{ overflowY: 'auto', flex: 1, padding: '0 16px' }}>
+        <SmoothScrollContainer className="scroll-fade scroll-fade-top-only" style={{ flex: 1 }} innerStyle={{ padding: '0 16px' }}>
 
           {/* Account & Mode */}
           <Section>
             <SectionLabel>Account &amp; Mode</SectionLabel>
 
-            
+            {/* Mode selector */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--white)', letterSpacing: '0.06em' }}>
+                Mode
+              </span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['hub', 'live'] as const).map((m) => {
+                  const active = mode === m
+                  const disabled = m === 'live' && !f1tvAuthenticated
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      className="interactive-chip"
+                      onClick={() => handleModeChange(m)}
+                      disabled={disabled}
+                      title={disabled ? 'Sign in with F1TV to enable live mode' : undefined}
+                      style={{
+                        padding: '4px 14px',
+                        borderRadius: 3,
+                        border: `0.5px solid ${active ? 'var(--border3)' : 'var(--border)'}`,
+                        background: active ? 'var(--bg4)' : 'transparent',
+                        fontFamily: 'var(--mono)',
+                        fontSize: 8,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: disabled ? 'var(--muted2)' : 'var(--white)',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: disabled ? 0.55 : 1,
+                      }}
+                    >
+                      {m}
+                    </button>
+                  )
+                })}
+              </div>
+              {mode === 'live' && (
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '0.06em', color: 'var(--green)' }}>
+                  Live mode active — using FastF1 session data.
+                </span>
+              )}
+            </div>
 
-            
 
             {/* FastF1: bridge status + F1TV auth */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -886,6 +933,60 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               <ActionButton onClick={() => setDriverManagerOpen(true)}>
                 Open driver manager
               </ActionButton>
+
+              {overrideCount > 0 && (
+                <ActionButton
+                  variant="danger"
+                  onClick={() => {
+                    Object.keys(teamColorOverrides).forEach(clearTeamColorForTeam)
+                  }}
+                >
+                  Reset {overrideCount} team color override{overrideCount !== 1 ? 's' : ''}
+                </ActionButton>
+              )}
+            </div>
+          </Section>
+
+          {/* View */}
+          <Section>
+            <SectionLabel>View</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--white)', letterSpacing: '0.06em' }}>
+                Window focus follows
+              </span>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {(['FOCUS', 'P1', 'P2', 'P3', 'P4', 'P5', 'GAP+1', 'GAP-1'] as const).map((sel) => {
+                  const active = windowFocusSelector === sel
+                  return (
+                    <button
+                      key={sel}
+                      type="button"
+                      className="interactive-chip"
+                      onClick={() => setWindowFocusSelector(sel)}
+                      style={{
+                        padding: '3px 9px',
+                        borderRadius: 3,
+                        border: `0.5px solid ${active ? 'var(--border3)' : 'var(--border)'}`,
+                        background: active ? 'var(--bg4)' : 'transparent',
+                        fontFamily: 'var(--mono)',
+                        fontSize: 8,
+                        letterSpacing: '0.08em',
+                        color: 'var(--white)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {sel}
+                    </button>
+                  )
+                })}
+              </div>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '0.06em', color: 'var(--muted)' }}>
+                {windowFocusSelector === 'FOCUS'
+                  ? 'Follows the manually focused driver.'
+                  : windowFocusSelector.startsWith('GAP')
+                    ? `Follows the driver ${windowFocusSelector === 'GAP+1' ? 'one position ahead of' : 'one position behind'} the leader.`
+                    : `Follows the driver in ${windowFocusSelector}.`}
+              </span>
             </div>
           </Section>
 
@@ -1021,7 +1122,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
           </Section>
 
-        </div>
+        </SmoothScrollContainer>
 
         {driverManagerOpen && <DriverManagerPanel onClose={() => setDriverManagerOpen(false)} />}
       </div>

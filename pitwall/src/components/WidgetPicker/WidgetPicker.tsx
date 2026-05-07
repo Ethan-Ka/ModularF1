@@ -4,6 +4,7 @@ import { useDraggingStore } from '../../store/draggingStore'
 import { WIDGET_DEFAULTS } from '../../widgets/registry'
 import { WIDGET_PICKER_LIST, WIDGET_CATEGORY_MAP as MANIFEST_CATEGORY_MAP } from '../../widgets/manifest'
 import type { WidgetCategory as ManifestWidgetCategory } from '../../widgets/manifest'
+import { SmoothScrollContainer } from '../SmoothScrollContainer'
 
 const GRID_COLS = 24
 const GRID_ROW_HEIGHT = 40
@@ -1528,7 +1529,7 @@ export function WidgetPicker({ onClose, onAdd }: WidgetPickerProps) {
         </div>
 
         {/* Widget grid */}
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 18px 16px 14px' }}>
+        <SmoothScrollContainer style={{ flex: 1, overflowX: 'hidden' }} innerStyle={{ padding: '8px 18px 16px 14px' }}>
           {filtered.length === 0 ? (
             <div
               style={{
@@ -1587,7 +1588,7 @@ export function WidgetPicker({ onClose, onAdd }: WidgetPickerProps) {
               ))}
             </div>
           )}
-        </div>
+        </SmoothScrollContainer>
       </div>
     </>,
     document.body

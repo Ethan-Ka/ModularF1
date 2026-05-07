@@ -4,6 +4,7 @@ import { DriverTab } from './DriverTab'
 import { FormulaTab } from './FormulaTab'
 import type { DriverContext } from '../../store/workspaceStore'
 import { useDriverStore } from '../../store/driverStore'
+import { SmoothScrollContainer } from '../SmoothScrollContainer'
 
 // Widget types that expose a formula tab
 const INFERRED_WIDGET_TYPES = [
@@ -200,7 +201,7 @@ export function WidgetSettingsPanel({ widgetId, onClose }: WidgetSettingsPanelPr
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+      <SmoothScrollContainer style={{ flex: 1 }} innerStyle={{ padding: 16 }}>
         {activeTab === 'display' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
@@ -515,7 +516,7 @@ export function WidgetSettingsPanel({ widgetId, onClose }: WidgetSettingsPanelPr
             </div>
           </div>
         )}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

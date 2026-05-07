@@ -6,6 +6,7 @@ import { usePositions } from '../../hooks/usePositions'
 import { loadSeasonCatalog, type SeasonCatalogEntry } from '../../lib/seasonData'
 import { DriverCard } from './DriverCard'
 import { DriverProfileModal } from '../DriverProfile/DriverProfileModal'
+import { SmoothScrollContainer } from '../SmoothScrollContainer'
 
 interface DriverManagerPanelProps {
   onClose: () => void
@@ -455,7 +456,7 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
           </button>
         </div>
 
-        <div className="scroll-fade" style={{ overflowY: 'auto', flex: 1, padding: 16 }}>
+        <SmoothScrollContainer className="scroll-fade" style={{ flex: 1 }} innerStyle={{ padding: 16 }}>
           {/* Canvas focus strip (embedded) */}
           <div style={{
             display: 'flex',
@@ -760,7 +761,7 @@ export function DriverManagerPanel({ onClose }: DriverManagerPanelProps) {
               </div>
             )}
           </div>
-        </div>
+        </SmoothScrollContainer>
       </div>
     </div>
 

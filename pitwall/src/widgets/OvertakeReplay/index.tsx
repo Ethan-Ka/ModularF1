@@ -23,6 +23,7 @@ import { useSessionStore } from '../../store/sessionStore'
 import { useFastF1Results } from '../../hooks/useFastF1'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import { EmptyState } from '../widgetUtils'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 interface OvertakeReplayProps {
   widgetId: string
@@ -302,7 +303,7 @@ export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
             HIST
           </span>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
           {gridRows.length === 0 ? (
             <EmptyState message="No results available" subMessage="Requires a FastF1 race session" />
           ) : (
@@ -343,7 +344,7 @@ export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
               )
             })
           )}
-        </div>
+        </SmoothScrollContainer>
       </div>
     )
   }
@@ -401,7 +402,7 @@ export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
       </div>
 
       {/* Feed */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
         {rows.length === 0 ? (
           <EmptyState
             message="No overtakes detected yet"
@@ -417,7 +418,7 @@ export function OvertakeReplay({ widgetId: _ }: OvertakeReplayProps) {
             />
           ))
         )}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

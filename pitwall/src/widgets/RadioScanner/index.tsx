@@ -20,6 +20,7 @@ import { useTeamRadio } from '../../hooks/useTeamRadio'
 import { useDriverStore } from '../../store/driverStore'
 import { useSessionStore } from '../../store/sessionStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 interface DriverActivity {
   driverNumber: number
@@ -263,7 +264,7 @@ export function RadioScanner({ widgetId: _ }: RadioScannerProps) {
       </div>
 
       {/* Channel list */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <SmoothScrollContainer style={{ flex: 1 }}>
         {activities.length === 0 ? (
           <div style={{
             display: 'flex',
@@ -281,7 +282,7 @@ export function RadioScanner({ widgetId: _ }: RadioScannerProps) {
             <ScannerCard key={activity.driverNumber} activity={activity} now={now} />
           ))
         )}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

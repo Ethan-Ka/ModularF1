@@ -21,6 +21,7 @@ import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import { EmptyState } from '../widgetUtils'
 import type { OpenF1Stint } from '../../api/openf1'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 // ─── Compound colours ────────────────────────────────────────────────────────
 
@@ -350,7 +351,7 @@ export function PitStopLog({ widgetId: _ }: { widgetId: string }) {
       ))}
 
       {/* Scrollable rows area */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
         {driverNumbers.length === 0 ? (
           <EmptyState message="No pit stops yet" />
         ) : !hasAnyStops ? (
@@ -367,7 +368,7 @@ export function PitStopLog({ widgetId: _ }: { widgetId: string }) {
             getTeamColor={getTeamColor}
           />
         )}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

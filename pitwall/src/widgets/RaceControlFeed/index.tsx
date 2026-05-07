@@ -19,6 +19,7 @@ Notes: messages arrive in real time from FastF1 timing data. The feed auto-scrol
 import { useRaceControl } from '../../hooks/useRaceControl'
 import type { OpenF1RaceControl } from '../../api/openf1'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 interface RaceControlFeedProps {
   widgetId: string
@@ -188,7 +189,7 @@ export function RaceControlFeed({ widgetId: _ }: RaceControlFeedProps) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <SmoothScrollContainer style={{ flex: 1 }}>
         {entries.length === 0 ? (
           <div style={{
             display: 'flex',
@@ -206,7 +207,7 @@ export function RaceControlFeed({ widgetId: _ }: RaceControlFeedProps) {
             <RaceControlRow key={i} entry={entry} />
           ))
         )}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

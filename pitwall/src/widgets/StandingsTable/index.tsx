@@ -19,6 +19,7 @@ import { useSeasonStandings } from '../../hooks/useSeasonStandings'
 import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import { EmptyState } from '../widgetUtils'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 interface StandingsTableProps {
   widgetId: string
@@ -161,7 +162,7 @@ export function StandingsTable({ widgetId: _ }: StandingsTableProps) {
       )}
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
         {isLoading ? (
           <div
             style={{
@@ -213,7 +214,7 @@ export function StandingsTable({ widgetId: _ }: StandingsTableProps) {
             />
           ))
         )}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useFastF1Sessions, type FastF1SessionRow } from '../../hooks/useSession'
 import { useSessionStore } from '../../store/sessionStore'
 import type { OpenF1Session } from '../../api/openf1'
+import { SmoothScrollContainer } from '../SmoothScrollContainer'
 
 interface SessionBrowserModalProps {
   onClose: () => void
@@ -352,7 +353,7 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
         </div>
 
         {/* Body */}
-        <div className="scroll-fade" style={{ overflowY: 'auto', flex: 1 }}>
+        <SmoothScrollContainer className="scroll-fade" style={{ flex: 1 }}>
           {isLoading ? (
             <div style={{
               display: 'flex',
@@ -389,7 +390,7 @@ export function SessionBrowserModal({ onClose }: SessionBrowserModalProps) {
               />
             ))
           )}
-        </div>
+        </SmoothScrollContainer>
       </div>
     </div>,
     document.body

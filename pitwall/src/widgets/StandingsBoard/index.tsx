@@ -19,6 +19,7 @@ import { usePositions } from '../../hooks/usePositions'
 import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import { RACE_POINTS_BY_POSITION } from '../../lib/f1Points'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 interface StandingsBoardProps {
   widgetId: string
@@ -151,7 +152,7 @@ export function StandingsBoard({ widgetId: _ }: StandingsBoardProps) {
         }}
       >
         <TableHeader title="Driver Standings" />
-        <div style={{ overflowY: 'auto', minHeight: 0 }}>
+        <SmoothScrollContainer style={{ minHeight: 0 }}>
           {data.driverRows.map((row) => (
             <div
               key={row.driverNumber}
@@ -221,7 +222,7 @@ export function StandingsBoard({ widgetId: _ }: StandingsBoardProps) {
               </span>
             </div>
           ))}
-        </div>
+        </SmoothScrollContainer>
       </section>
 
       <section
@@ -235,7 +236,7 @@ export function StandingsBoard({ widgetId: _ }: StandingsBoardProps) {
         }}
       >
         <TableHeader title="Constructor Stats" />
-        <div style={{ overflowY: 'auto', minHeight: 0 }}>
+        <SmoothScrollContainer style={{ minHeight: 0 }}>
           {data.teamRows.map((team, index) => (
             <div
               key={team.teamName}
@@ -316,7 +317,7 @@ export function StandingsBoard({ widgetId: _ }: StandingsBoardProps) {
               </span>
             </div>
           ))}
-        </div>
+        </SmoothScrollContainer>
       </section>
     </div>
   )

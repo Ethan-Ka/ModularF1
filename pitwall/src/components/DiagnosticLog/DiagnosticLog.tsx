@@ -3,6 +3,7 @@ import { useLogStore, type LogLevel, type LogEntry } from '../../store/logStore'
 import { useAmbientStore, type FlagState } from '../../store/ambientStore'
 import { useSessionStore } from '../../store/sessionStore'
 import { useNextRace } from '../../hooks/useNextRace'
+import { SmoothScrollContainer, type SmoothScrollHandle } from '../SmoothScrollContainer'
 
 const ALL_LEVELS: LogLevel[] = ['ERR', 'WARN', 'INFO', 'DBG']
 
@@ -397,7 +398,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
   const [devOpen, setDevOpen] = useState(false)
   const [isPresent, setIsPresent] = useState(open)
   const [isClosing, setIsClosing] = useState(false)
-  const bodyRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<SmoothScrollHandle>(null)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -425,7 +426,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
   // Auto-scroll to bottom on new entries
   useEffect(() => {
     if (open && bodyRef.current) {
-      bodyRef.current.scrollTop = bodyRef.current.scrollHeight
+      bodyRef.current?.scrollToBottom()
     }
   }, [entries, open])
 
@@ -598,12 +599,9 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
       </div>
 
       {/* Body */}
-      <div
+      <SmoothScrollContainer
         ref={bodyRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-        }}
+        style={{ flex: 1 }}
       >
         {filtered.length === 0 ? (
           <div style={{
@@ -621,7 +619,7 @@ export function DiagnosticLog({ open, onClose }: DiagnosticLogProps) {
         ) : (
           filtered.map((entry, index) => <LogRow key={entry.id} entry={entry} index={index} />)
         )}
-      </div>
+      </SmoothScrollContainer>
 
       {/* DEV controls panel */}
       {devOpen && <DevPanel />}

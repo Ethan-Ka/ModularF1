@@ -21,6 +21,7 @@ import { useStints } from '../../hooks/useStints'
 import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import type { OpenF1Driver } from '../../api/openf1'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 const DEFAULT_MAX_LAP = 70
 
@@ -356,11 +357,9 @@ export function StrategyTimeline({ widgetId: _ }: { widgetId: string }) {
       <LapAxis maxLap={DEFAULT_MAX_LAP} />
 
       {/* Driver rows — scrollable */}
-      <div
+      <SmoothScrollContainer
         style={{
           flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
           minHeight: 0,
         }}
       >
@@ -374,7 +373,7 @@ export function StrategyTimeline({ widgetId: _ }: { widgetId: string }) {
             getTeamColor={getTeamColor}
           />
         ))}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

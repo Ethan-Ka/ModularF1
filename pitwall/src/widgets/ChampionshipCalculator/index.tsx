@@ -3,6 +3,7 @@ import { useSeasonStandings } from '../../hooks/useSeasonStandings'
 import { useDriverStore } from '../../store/driverStore'
 import { RACE_POINTS_BY_POSITION } from '../../lib/f1Points'
 import { EmptyState } from '../widgetUtils'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 interface ChampionshipCalculatorProps {
   widgetId: string
@@ -324,7 +325,7 @@ export function ChampionshipCalculator({ widgetId: _ }: ChampionshipCalculatorPr
       </div>
 
       {/* Rows */}
-      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+      <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
         {mode === 'simulate'
           ? simulateResults.map((row, idx) => {
               const driver = getDriver(row.driverNumber)
@@ -541,7 +542,7 @@ export function ChampionshipCalculator({ widgetId: _ }: ChampionshipCalculatorPr
                 </div>
               )
             })}
-      </div>
+      </SmoothScrollContainer>
 
       {/* Footer */}
       <div

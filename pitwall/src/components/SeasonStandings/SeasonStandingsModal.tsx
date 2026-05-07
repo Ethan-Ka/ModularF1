@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useSeasonStandings, type DriverSeasonStanding } from '../../hooks/useSeasonStandings'
 import { useDriverStore } from '../../store/driverStore'
 import { DriverProfileModal } from '../DriverProfile/DriverProfileModal'
+import { SmoothScrollContainer } from '../SmoothScrollContainer'
 
 interface SeasonStandingsModalProps {
   onClose: () => void
@@ -820,7 +821,7 @@ export function SeasonStandingsPanel({
                   PTS
                 </span>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
                 {standings.map((standing, i) => (
                   <DriverRow
                     key={standing.driverNumber}
@@ -833,7 +834,7 @@ export function SeasonStandingsPanel({
                     onViewProfile={() => setProfileDriverNumber(standing.driverNumber)}
                   />
                 ))}
-              </div>
+              </SmoothScrollContainer>
             </div>
 
             {/* Constructors championship */}
@@ -872,7 +873,7 @@ export function SeasonStandingsPanel({
                   PTS
                 </span>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
                 {constructorStandings.map((team, i) => (
                   <ConstructorRow
                     key={team.teamName}
@@ -886,7 +887,7 @@ export function SeasonStandingsPanel({
                     staggerIndex={i}
                   />
                 ))}
-              </div>
+              </SmoothScrollContainer>
             </div>
           </div>
         )}

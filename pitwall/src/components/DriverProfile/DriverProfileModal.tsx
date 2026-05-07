@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useDriverStore } from '../../store/driverStore'
 import { useStandingsStore } from '../../store/standingsStore'
 import { useDriverCareer } from '../../hooks/useDriverCareer'
+import { SmoothScrollContainer } from '../SmoothScrollContainer'
 
 interface DriverProfileModalProps {
   driverNumber: number
@@ -445,7 +446,7 @@ export function DriverProfileModal({ driverNumber, onClose }: DriverProfileModal
           </div>
 
           {career && career.seasons.length > 0 && (
-            <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+            <SmoothScrollContainer style={{ flex: 1, minHeight: 0 }}>
               {/* Column headers */}
               <div
                 style={{
@@ -550,7 +551,7 @@ export function DriverProfileModal({ driverNumber, onClose }: DriverProfileModal
                   </div>
                 )
               })}
-            </div>
+            </SmoothScrollContainer>
           )}
 
           {!careerLoading && career && career.seasons.length === 0 && (

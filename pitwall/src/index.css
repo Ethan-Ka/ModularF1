@@ -46,6 +46,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  overscroll-behavior: contain;
 }
 
 html, body {
@@ -124,6 +125,7 @@ html, body {
 
 .floating-pulse {
   animation: floatingPulse 2.8s ease-in-out infinite;
+  will-change: box-shadow;
 }
 
 .glass-overlay {

@@ -346,33 +346,67 @@ const CIRCUIT_HISTORY: Record<string, {
 }
 
 const CIRCUIT_ALT: Record<string, number> = {
-  'Monaco':      0.15,
-  'Monte Carlo': 0.15,
-  'Imola':       0.22,
-  'Barcelona':   0.22,
-  'Silverstone': 0.22,
-  'Budapest':    0.22,
-  'Spa':         0.20,
-  'Zandvoort':   0.19,
-  'Monza':       0.20,
-  'Spielberg':   0.20,
-  'Madrid':      0.22,
+  'Monaco':        0.15,
+  'Monte Carlo':   0.15,
+  'Jeddah':        0.18,
+  'Baku':          0.18,
+  'Singapore':     0.18,
+  'Las Vegas':     0.20,
+  'Melbourne':     0.20,
+  'Montreal':      0.20,
+  'Montréal':      0.20,
+  'Spa':           0.20,
+  'Monza':         0.20,
+  'Spielberg':     0.20,
+  'Zandvoort':     0.19,
+  'Imola':         0.22,
+  'Barcelona':     0.22,
+  'Silverstone':   0.22,
+  'Budapest':      0.22,
+  'Madrid':        0.22,
+  'Austin':        0.22,
+  'Bahrain':       0.22,
+  'Suzuka':        0.22,
+  'Shanghai':      0.22,
+  'Miami':         0.22,
+  'Miami Gardens': 0.22,
+  'Lusail':        0.22,
+  'Mexico City':   0.22,
+  'São Paulo':     0.22,
+  'Sao Paulo':     0.22,
+  'Abu Dhabi':     0.22,
 }
 
 const NEARBY_LABELS: Record<string, Array<{ lat: number; lng: number; text: string }>> = {
-  'Monaco':      [{ lat: 43.7102, lng: 7.2620, text: 'Nice' },       { lat: 43.5528, lng: 7.0174, text: 'Cannes' },      { lat: 43.8359, lng: 7.6561, text: 'San Remo' }],
-  'Monte Carlo': [{ lat: 43.7102, lng: 7.2620, text: 'Nice' },       { lat: 43.5528, lng: 7.0174, text: 'Cannes' },      { lat: 43.8359, lng: 7.6561, text: 'San Remo' }],
-  'Imola':       [{ lat: 44.4949, lng: 11.3426, text: 'Bologna' },    { lat: 43.7696, lng: 11.2558, text: 'Florence' },   { lat: 44.0647, lng: 12.5736, text: 'Rimini' }],
-  'Barcelona':   [{ lat: 41.3851, lng: 2.1734, text: 'Barcelona' },  { lat: 41.1189, lng: 1.2445, text: 'Tarragona' },   { lat: 41.9794, lng: 2.8214, text: 'Girona' }],
-  'Silverstone': [{ lat: 51.5074, lng: -0.1278, text: 'London' },    { lat: 51.7520, lng: -1.2577, text: 'Oxford' },     { lat: 52.2405, lng: -0.9027, text: 'Northampton' }],
-  'Budapest':    [{ lat: 47.4979, lng: 19.0402, text: 'Budapest' },  { lat: 48.1486, lng: 17.1077, text: 'Bratislava' }, { lat: 48.2082, lng: 16.3738, text: 'Vienna' }],
-  'Spa':         [{ lat: 50.6326, lng: 5.5797, text: 'Liège' },      { lat: 50.4669, lng: 4.8674, text: 'Namur' },       { lat: 50.7753, lng: 6.0839, text: 'Aachen' }],
-  'Zandvoort':   [{ lat: 52.3676, lng: 4.9041, text: 'Amsterdam' },  { lat: 52.3873, lng: 4.6462, text: 'Haarlem' },     { lat: 52.0705, lng: 4.3007, text: 'The Hague' }],
-  'Monza':       [{ lat: 45.4654, lng: 9.1859, text: 'Milan' },      { lat: 45.8081, lng: 9.0852, text: 'Como' },        { lat: 45.6983, lng: 9.6773, text: 'Bergamo' }],
-  'Spielberg':   [{ lat: 47.0707, lng: 15.4395, text: 'Graz' },      { lat: 48.2082, lng: 16.3738, text: 'Vienna' },     { lat: 47.7995, lng: 13.0440, text: 'Salzburg' }],
-  'Madrid':      [{ lat: 40.4168, lng: -3.7038, text: 'Madrid' },    { lat: 39.8628, lng: -4.0273, text: 'Toledo' },     { lat: 40.9429, lng: -4.1088, text: 'Segovia' }],
-  'Baku':        [{ lat: 40.4093, lng: 49.8671, text: 'Baku' },      { lat: 40.3777, lng: 49.8920, text: 'Old City' },   { lat: 40.3654, lng: 49.8402, text: 'White City' }],
-  'Singapore':   [{ lat: 1.3521, lng: 103.8198, text: 'Singapore' }, { lat: 1.2904, lng: 103.8520, text: 'Sentosa' },    { lat: 1.4053, lng: 103.8678, text: 'Changi' }],
+  'Austin':        [{ lat: 30.2672, lng: -97.7431, text: 'Austin' },       { lat: 29.4241, lng: -98.4936, text: 'San Antonio' },  { lat: 30.2241, lng: -97.4742, text: 'Bastrop' }],
+  'Bahrain':       [{ lat: 26.2285, lng: 50.5860,  text: 'Manama' },       { lat: 26.1297, lng: 50.5550,  text: 'Riffa' },         { lat: 26.2640, lng: 50.6110,  text: 'Muharraq' }],
+  'Jeddah':        [{ lat: 21.4858, lng: 39.1925,  text: 'Jeddah' },       { lat: 21.3891, lng: 39.8579,  text: 'Mecca' },         { lat: 21.6066, lng: 39.1156,  text: 'Obhur' }],
+  'Melbourne':     [{ lat: -37.8136, lng: 144.9631, text: 'Melbourne' },   { lat: -37.8676, lng: 144.9813, text: 'St Kilda' },     { lat: -37.9832, lng: 145.0023, text: 'Caulfield' }],
+  'Suzuka':        [{ lat: 35.1815, lng: 136.9066, text: 'Nagoya' },       { lat: 34.9756, lng: 136.6243, text: 'Tsu' },           { lat: 34.7303, lng: 136.5086, text: 'Matsusaka' }],
+  'Shanghai':      [{ lat: 31.2304, lng: 121.4737, text: 'Shanghai' },     { lat: 31.2988, lng: 120.5853, text: 'Suzhou' },        { lat: 31.8699, lng: 117.2800, text: 'Nanjing' }],
+  'Miami':         [{ lat: 25.7907, lng: -80.1300, text: 'Miami Beach' },  { lat: 26.1224, lng: -80.1373, text: 'Ft Lauderdale' }, { lat: 25.7617, lng: -80.1918, text: 'Miami' }],
+  'Miami Gardens': [{ lat: 25.7907, lng: -80.1300, text: 'Miami Beach' },  { lat: 26.1224, lng: -80.1373, text: 'Ft Lauderdale' }, { lat: 25.7617, lng: -80.1918, text: 'Miami' }],
+  'Imola':         [{ lat: 44.4949, lng: 11.3426,  text: 'Bologna' },      { lat: 43.7696, lng: 11.2558,  text: 'Florence' },      { lat: 44.0647, lng: 12.5736,  text: 'Rimini' }],
+  'Monaco':        [{ lat: 43.7102, lng: 7.2620,   text: 'Nice' },         { lat: 43.5528, lng: 7.0174,   text: 'Cannes' },        { lat: 43.8359, lng: 7.6561,   text: 'San Remo' }],
+  'Monte Carlo':   [{ lat: 43.7102, lng: 7.2620,   text: 'Nice' },         { lat: 43.5528, lng: 7.0174,   text: 'Cannes' },        { lat: 43.8359, lng: 7.6561,   text: 'San Remo' }],
+  'Montreal':      [{ lat: 45.5048, lng: -73.5544, text: 'Montreal' },     { lat: 45.5019, lng: -73.5674, text: 'Old Port' },      { lat: 45.4215, lng: -75.6919, text: 'Ottawa' }],
+  'Montréal':      [{ lat: 45.5048, lng: -73.5544, text: 'Montreal' },     { lat: 45.5019, lng: -73.5674, text: 'Old Port' },      { lat: 45.4215, lng: -75.6919, text: 'Ottawa' }],
+  'Barcelona':     [{ lat: 41.3851, lng: 2.1734,   text: 'Barcelona' },    { lat: 41.1189, lng: 1.2445,   text: 'Tarragona' },     { lat: 41.9794, lng: 2.8214,   text: 'Girona' }],
+  'Spielberg':     [{ lat: 47.0707, lng: 15.4395,  text: 'Graz' },         { lat: 48.2082, lng: 16.3738,  text: 'Vienna' },        { lat: 47.7995, lng: 13.0440,  text: 'Salzburg' }],
+  'Silverstone':   [{ lat: 51.5074, lng: -0.1278,  text: 'London' },       { lat: 51.7520, lng: -1.2577,  text: 'Oxford' },        { lat: 52.2405, lng: -0.9027,  text: 'Northampton' }],
+  'Budapest':      [{ lat: 47.4979, lng: 19.0402,  text: 'Budapest' },     { lat: 48.1486, lng: 17.1077,  text: 'Bratislava' },    { lat: 48.2082, lng: 16.3738,  text: 'Vienna' }],
+  'Spa':           [{ lat: 50.6326, lng: 5.5797,   text: 'Liège' },        { lat: 50.4669, lng: 4.8674,   text: 'Namur' },         { lat: 50.7753, lng: 6.0839,   text: 'Aachen' }],
+  'Zandvoort':     [{ lat: 52.3676, lng: 4.9041,   text: 'Amsterdam' },    { lat: 52.3873, lng: 4.6462,   text: 'Haarlem' },       { lat: 52.0705, lng: 4.3007,   text: 'The Hague' }],
+  'Monza':         [{ lat: 45.4654, lng: 9.1859,   text: 'Milan' },        { lat: 45.8081, lng: 9.0852,   text: 'Como' },          { lat: 45.6983, lng: 9.6773,   text: 'Bergamo' }],
+  'Baku':          [{ lat: 40.4093, lng: 49.8671,  text: 'Baku' },         { lat: 40.3777, lng: 49.8920,  text: 'Old City' },      { lat: 40.3654, lng: 49.8402,  text: 'White City' }],
+  'Singapore':     [{ lat: 1.3521,  lng: 103.8198, text: 'Singapore' },    { lat: 1.2904,  lng: 103.8520, text: 'Sentosa' },        { lat: 1.4053,  lng: 103.8678, text: 'Changi' }],
+  'Lusail':        [{ lat: 25.2854, lng: 51.5310,  text: 'Doha' },         { lat: 25.1681, lng: 51.5964,  text: 'Al Wakrah' },     { lat: 25.6883, lng: 51.4958,  text: 'Al Khor' }],
+  'Las Vegas':     [{ lat: 36.1699, lng: -115.1398, text: 'Downtown' },    { lat: 36.1147, lng: -115.1728, text: 'The Strip' },    { lat: 36.0395, lng: -114.9817, text: 'Henderson' }],
+  'Mexico City':   [{ lat: 19.4326, lng: -99.1332, text: 'Mexico City' },  { lat: 19.0414, lng: -98.2063, text: 'Puebla' },        { lat: 19.2826, lng: -99.6557, text: 'Toluca' }],
+  'São Paulo':     [{ lat: -23.5505, lng: -46.6333, text: 'São Paulo' },   { lat: -23.6620, lng: -46.5385, text: 'Santo André' },  { lat: -22.9099, lng: -47.0626, text: 'Campinas' }],
+  'Sao Paulo':     [{ lat: -23.5505, lng: -46.6333, text: 'São Paulo' },   { lat: -23.6620, lng: -46.5385, text: 'Santo André' },  { lat: -22.9099, lng: -47.0626, text: 'Campinas' }],
+  'Abu Dhabi':     [{ lat: 24.4539, lng: 54.3773,  text: 'Abu Dhabi' },    { lat: 25.2048, lng: 55.2708,  text: 'Dubai' },         { lat: 24.2075, lng: 55.7447,  text: 'Al Ain' }],
+  'Madrid':        [{ lat: 40.4168, lng: -3.7038,  text: 'Madrid' },       { lat: 39.8628, lng: -4.0273,  text: 'Toledo' },        { lat: 40.9429, lng: -4.1088,  text: 'Segovia' }],
 }
 
 const FALLBACK_POV = { lat: 20, lng: 0, altitude: 2 }
@@ -493,6 +527,8 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
   const pendingCircuit = useRef<string | null>(null)
   // Tracks last active index to avoid redundant pointOfView calls on scroll
   const lastActiveIdx = useRef<number>(-1)
+  // Tracks the last circuit we pointed to — readable by stable callbacks
+  const currentCircuitRef = useRef<string | null>(null)
 
   const [geoJson, setGeoJson]         = useState<any>(null)
   const [globeSize, setGlobeSize]     = useState({ width: 600, height: 360 })
@@ -572,9 +608,11 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
     if (!globeRef.current) return
     if (!globeReady.current) {
       pendingCircuit.current = circuitShort
+      currentCircuitRef.current = circuitShort
       return
     }
     pendingCircuit.current = null
+    currentCircuitRef.current = circuitShort
     setFocusedCircuit(circuitShort)
     const coords = CIRCUIT_COORDS[circuitShort]
     globeRef.current.pointOfView(
@@ -588,13 +626,14 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
     if (!globeRef.current) return
     const mat = globeRef.current.globeMaterial?.()
     if (mat) mat.color?.setHex(0x0a0c10)
-    if (pendingCircuit.current) {
-      const pending = pendingCircuit.current
-      const coords = CIRCUIT_COORDS[pending]
+    // Prefer pending (queued before init), then last known circuit (e.g. after screen switch), then default
+    const toCircuit = pendingCircuit.current ?? currentCircuitRef.current
+    if (toCircuit) {
+      const coords = CIRCUIT_COORDS[toCircuit]
       pendingCircuit.current = null
-      setFocusedCircuit(pending)
+      setFocusedCircuit(toCircuit)
       globeRef.current.pointOfView(
-        coords ? { lat: coords.lat, lng: coords.lng, altitude: CIRCUIT_ALT[pending] ?? FOCUSED_ALT } : FALLBACK_POV,
+        coords ? { lat: coords.lat, lng: coords.lng, altitude: CIRCUIT_ALT[toCircuit] ?? FOCUSED_ALT } : FALLBACK_POV,
         0
       )
     } else {
@@ -744,7 +783,7 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
               {/* ── Text column ── */}
               <div style={{
                 display: 'flex', flexDirection: 'column', gap: 7,
-                overflowX: 'hidden', scrollbarWidth: 'none', minWidth: 0,
+                overflow: 'clip', scrollbarWidth: 'none', minWidth: 0,
               }}>
                 {/* Top block */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>

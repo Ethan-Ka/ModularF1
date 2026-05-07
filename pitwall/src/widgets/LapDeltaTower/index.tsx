@@ -17,6 +17,7 @@ import { useLaps } from '../../hooks/useLaps'
 import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import { formatTime, formatGap, formatInterval } from '../widgetUtils'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 interface LapDeltaTowerProps {
   widgetId: string
@@ -80,7 +81,7 @@ export function LapDeltaTower({ widgetId: _ }: LapDeltaTowerProps) {
       </div>
 
       {/* Data rows */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <SmoothScrollContainer style={{ flex: 1 }}>
         {rows.length === 0 && (
           <div style={{
             display: 'flex',
@@ -210,7 +211,7 @@ export function LapDeltaTower({ widgetId: _ }: LapDeltaTowerProps) {
             </div>
           )
         })}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

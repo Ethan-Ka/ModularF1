@@ -18,6 +18,7 @@ import { useTeamRadio } from '../../hooks/useTeamRadio'
 import { useDriverStore } from '../../store/driverStore'
 import { useRefreshFade } from '../../hooks/useRefreshFade'
 import type { OpenF1TeamRadio } from '../../api/openf1'
+import { SmoothScrollContainer } from '../../components/SmoothScrollContainer'
 
 function formatTime(dateStr: string): string {
   try {
@@ -227,7 +228,7 @@ export function RadioFeedText({ widgetId: _ }: RadioFeedTextProps) {
       </div>
 
       {/* Feed */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <SmoothScrollContainer style={{ flex: 1 }}>
         {entries.length === 0 ? (
           <div style={{
             display: 'flex',
@@ -250,7 +251,7 @@ export function RadioFeedText({ widgetId: _ }: RadioFeedTextProps) {
             />
           ))
         )}
-      </div>
+      </SmoothScrollContainer>
     </div>
   )
 }

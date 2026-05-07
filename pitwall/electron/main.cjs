@@ -1,8 +1,7 @@
-const { app, BrowserWindow, shell, ipcMain, Menu, dialog, protocol, net } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, dialog, protocol } = require('electron')
 const nodeFs = require('fs')
 const fs = require('fs/promises')
 const path = require('path')
-const { pathToFileURL } = require('url')
 const { spawn } = require('child_process')
 const f1store = require('./f1store.cjs')
 
@@ -221,7 +220,10 @@ function finalizeWindowStartup(win, options = {}) {
 }
 
 function createWindow(options = {}) {
+  const isDriverManager = options.windowKind === 'driver-manager'
+  const isWidgetSettings = options.windowKind === 'widget-settings'
   const isWidgetPopout = options.windowKind === 'widget-popout' || Boolean(options.bootstrapWidget)
+  const isPanelWindow = isDriverManager || isWidgetSettings || isWidgetPopout
   const bootstrapWidgetType = options.bootstrapWidget
     && typeof options.bootstrapWidget === 'object'
     && options.bootstrapWidget.widget
@@ -229,9 +231,9 @@ function createWindow(options = {}) {
     && typeof options.bootstrapWidget.widget.type === 'string'
       ? options.bootstrapWidget.widget.type
       : undefined
-  const windowKind = isWidgetPopout ? 'widget-popout' : 'main'
-  const minWidth = isWidgetPopout ? POPOUT_WINDOW_MIN_WIDTH : MAIN_WINDOW_MIN_WIDTH
-  const minHeight = isWidgetPopout ? POPOUT_WINDOW_MIN_HEIGHT : MAIN_WINDOW_MIN_HEIGHT
+  const windowKind = isWidgetPopout ? 'widget-popout' : isDriverManager ? 'driver-manager' : isWidgetSettings ? 'widget-settings' : 'main'
+  const minWidth = isPanelWindow ? POPOUT_WINDOW_MIN_WIDTH : MAIN_WINDOW_MIN_WIDTH
+  const minHeight = isPanelWindow ? POPOUT_WINDOW_MIN_HEIGHT : MAIN_WINDOW_MIN_HEIGHT
   const requestedWidth = typeof options.width === 'number' && Number.isFinite(options.width)
     ? Math.round(options.width)
     : undefined
@@ -241,22 +243,22 @@ function createWindow(options = {}) {
   const win = new BrowserWindow({
     width: requestedWidth != null
       ? Math.max(minWidth, requestedWidth)
-      : (isWidgetPopout ? 640 : 1440),
+      : (isDriverManager ? 1440 : isWidgetSettings ? 300 : isWidgetPopout ? 640 : 1440),
     height: requestedHeight != null
       ? Math.max(minHeight, requestedHeight)
-      : (isWidgetPopout ? 420 : 900),
+      : (isDriverManager ? 800 : isWidgetSettings ? 680 : isWidgetPopout ? 420 : 900),
     x: options.x,
     y: options.y,
     minWidth,
     minHeight,
     backgroundColor: '#0B0B0C',
-    show: typeof options.show === 'boolean' ? options.show : isWidgetPopout,
+    show: typeof options.show === 'boolean' ? options.show : isPanelWindow,
     title: 'PITWALL',
-    frame: !isWidgetPopout,
-    titleBarStyle: isWidgetPopout ? 'hidden' : 'hiddenInset',
-    titleBarOverlay: isWidgetPopout ? false : undefined,
-    useContentSize: isWidgetPopout,
-    autoHideMenuBar: isWidgetPopout,
+    frame: !isPanelWindow,
+    titleBarStyle: isPanelWindow ? 'hidden' : 'hiddenInset',
+    titleBarOverlay: isPanelWindow ? false : undefined,
+    useContentSize: isPanelWindow,
+    autoHideMenuBar: isPanelWindow,
     icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -271,47 +273,49 @@ function createWindow(options = {}) {
     pendingBootstrapByWebContentsId.set(webContentsId, options.bootstrapWidget)
   }
 
-  if (isWidgetPopout) {
+  if (isPanelWindow) {
     win.removeMenu()
     win.setMenuBarVisibility(false)
 
-    let isMoving = false
-    win.on('move', () => {
-      emitPopoutDockPreview(win)
-    })
-
-    win.on('will-move', () => {
-      isMoving = true
-    })
-
-    win.on('moved', () => {
-      if (!isMoving) return
-      isMoving = false
-      const previewTarget = emitPopoutDockPreview(win)
-      if (!previewTarget) return
-      tryAutoDockPopoutWindow(win, previewTarget)
-    })
-
-    win.on('closed', () => {
-      clearPopoutDockPreviewForMainWindows()
-    })
-
-    if (options.reusablePopout) {
-      if (
-        MAX_WARM_POPOUT_WINDOWS === 1
-        && reusablePopoutWindow
-        && reusablePopoutWindow !== win
-        && !reusablePopoutWindow.isDestroyed()
-      ) {
-        reusablePopoutWindow.destroy()
-      }
-
-      reusablePopoutWindow = win
-      win.on('close', (event) => {
-        if (isAppQuitting) return
-        event.preventDefault()
-        hideReusablePopoutWindow(win)
+    if (isWidgetPopout) {
+      let isMoving = false
+      win.on('move', () => {
+        emitPopoutDockPreview(win)
       })
+
+      win.on('will-move', () => {
+        isMoving = true
+      })
+
+      win.on('moved', () => {
+        if (!isMoving) return
+        isMoving = false
+        const previewTarget = emitPopoutDockPreview(win)
+        if (!previewTarget) return
+        tryAutoDockPopoutWindow(win, previewTarget)
+      })
+
+      win.on('closed', () => {
+        clearPopoutDockPreviewForMainWindows()
+      })
+
+      if (options.reusablePopout) {
+        if (
+          MAX_WARM_POPOUT_WINDOWS === 1
+          && reusablePopoutWindow
+          && reusablePopoutWindow !== win
+          && !reusablePopoutWindow.isDestroyed()
+        ) {
+          reusablePopoutWindow.destroy()
+        }
+
+        reusablePopoutWindow = win
+        win.on('close', (event) => {
+          if (isAppQuitting) return
+          event.preventDefault()
+          hideReusablePopoutWindow(win)
+        })
+      }
     }
   }
 
@@ -719,15 +723,54 @@ app.whenReady().then(() => {
   app.setName('PITWALL')
   buildAppMenu()
 
+  // Inject a Content-Security-Policy header for all renderer navigations.
+  // In dev mode Vite HMR requires 'unsafe-eval', so we only enforce the strict
+  // policy when packaged. The Electron warning is expected and benign during dev.
+  if (!isDev) {
+    const CSP = [
+      "default-src 'self' app:",
+      "script-src 'self' app:",
+      "style-src 'self' app: 'unsafe-inline'",
+      "connect-src 'self' app: https://api.openf1.org https://api.jolpi.ca https://raw.githubusercontent.com http://127.0.0.1:7822",
+      "img-src 'self' app: data:",
+      "font-src 'self' app:",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join('; ')
+
+    const { session } = require('electron')
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [CSP],
+        },
+      })
+    })
+  }
+
   if (!isDev) {
     const distRoot = path.resolve(__dirname, '../dist')
-    protocol.handle('app', (request) => {
+    const MIME = {
+      '.html': 'text/html', '.js': 'application/javascript', '.mjs': 'application/javascript',
+      '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
+      '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+      '.avif': 'image/avif', '.webp': 'image/webp', '.ico': 'image/x-icon',
+      '.ttf': 'font/ttf', '.woff': 'font/woff', '.woff2': 'font/woff2',
+    }
+    protocol.handle('app', async (request) => {
       const { pathname } = new URL(request.url)
       const filePath = path.normalize(path.join(distRoot, decodeURIComponent(pathname)))
       if (!filePath.startsWith(distRoot + path.sep) && filePath !== distRoot) {
         return new Response('Forbidden', { status: 403 })
       }
-      return net.fetch(pathToFileURL(filePath).href)
+      try {
+        const data = await fs.readFile(filePath)
+        const mime = MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream'
+        return new Response(data, { headers: { 'content-type': mime } })
+      } catch {
+        return new Response('Not Found', { status: 404 })
+      }
     })
   }
 

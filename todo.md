@@ -1,8 +1,11 @@
 # Urgent To Do 
 
-Make app run in 60fps :(
+/resume FIX POPUPS
+
 
 FIX THE SECTOR MAP AND TRACK MAP
+
+
 
 rewrite the sectormap widget. It should be an image of the deatiled track(the one that has sectors) and then use the track and drivers that are rendered on teh track map and overlay it over the detailed track map. This is to keep the positioning of the drivers intact. There should be an algorithm to determine the detailed track map positioning, and adjus tthe overlayed regular track map to match. This is because the detailed track maps don't match the size and rotation of the regular track maps. You should use sectormap/index.tsx for the widget. Don't focus on the current implemnentation. It is not working ad I want to scrap it
 

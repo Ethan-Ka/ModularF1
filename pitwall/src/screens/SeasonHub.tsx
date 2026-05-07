@@ -10,6 +10,7 @@ import { DiagnosticLog } from '../components/DiagnosticLog/DiagnosticLog'
 import { useLogStore } from '../store/logStore'
 import { GlobeCalendar } from './GlobeCalendar'
 import type { OpenF1Session } from '../api/openf1'
+import { SmoothScrollContainer } from '../components/SmoothScrollContainer'
 
 const YEAR = new Date().getFullYear()
 
@@ -327,7 +328,7 @@ function HeadlinesFeed() {
         paddingBottom: 0,
         boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.02)',
       }}>
-        <div style={{ display: 'grid', gap: 10, height: 260, overflowY: 'auto', paddingRight: 6 }}>
+        <SmoothScrollContainer style={{ display: 'grid', gap: 10, height: 260 }} innerStyle={{ paddingRight: 6 }}>
           {cards.map((item, i) => {
             const cardStyle: React.CSSProperties = {
               display: 'grid',
@@ -383,18 +384,16 @@ function HeadlinesFeed() {
                 {item.title}
               </div>
               {item.description && (
-                <div style={{
+                <SmoothScrollContainer style={{
                   maxHeight: 32,
-                  overflowY: 'auto',
-                  paddingRight: 6,
                   fontFamily: 'var(--mono)',
                   fontSize: 8,
                   lineHeight: 1.45,
                   color: 'rgba(255,255,255,0.45)',
                   marginBottom: 4,
-                }}>
+                }} innerStyle={{ paddingRight: 6 }}>
                   {item.description.replace(/<[^>]+>/g, '').trim()}
-                </div>
+                </SmoothScrollContainer>
               )}
               {(item.pubDate || sourceUrl || item.source) && (
                 <div style={{
@@ -434,7 +433,7 @@ function HeadlinesFeed() {
               </div>
             )
           })}
-        </div>
+        </SmoothScrollContainer>
       </div>
     </div>
   )
@@ -762,13 +761,12 @@ export function SeasonHub() {
         </div>
 
         {/* Right column: Next Race + Headlines + Standings */}
-        <div style={{
+        <SmoothScrollContainer style={{
           flex: 1,
-          overflowY: 'auto',
-          padding: '12px 24px 48px',
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(255,255,255,0.07) transparent',
-        }}>
+          
+        }} innerStyle={{ padding: '12px 24px 48px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10, right: 4, }}>
             {([
               { label: 'Settings', action: () => setSettingsOpen(true) },
@@ -799,7 +797,7 @@ export function SeasonHub() {
           <NextRaceCard />
           <HeadlinesFeed />
           <ChampionshipStandingsSection />
-        </div>
+        </SmoothScrollContainer>
       </div>
 
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
