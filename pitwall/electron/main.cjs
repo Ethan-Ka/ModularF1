@@ -1,12 +1,19 @@
-const { app, BrowserWindow, shell, ipcMain, Menu, dialog } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, dialog, protocol, net } = require('electron')
 const nodeFs = require('fs')
 const fs = require('fs/promises')
 const path = require('path')
+const { pathToFileURL } = require('url')
 const { spawn } = require('child_process')
 const f1store = require('./f1store.cjs')
 
 const isDev = process.env.VITE_DEV_SERVER_URL != null
 const mainWindows = new Set()
+
+// Must run before app.whenReady() — Electron freezes scheme privileges at startup.
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'app',
+  privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+}])
 
 // ---------------------------------------------------------------------------
 // FastF1 Python sidecar
@@ -318,14 +325,13 @@ function createWindow(options = {}) {
       win.webContents.openDevTools()
     }
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'), {
-      query: isWidgetPopout
-        ? {
-            windowKind: 'widget-popout',
-            ...(bootstrapWidgetType ? { widgetType: bootstrapWidgetType } : {}),
-          }
-        : undefined,
-    })
+    const params = new URLSearchParams()
+    if (isWidgetPopout) {
+      params.set('windowKind', 'widget-popout')
+      if (bootstrapWidgetType) params.set('widgetType', bootstrapWidgetType)
+    }
+    const qs = params.toString()
+    win.loadURL(`app://./index.html${qs ? `?${qs}` : ''}`)
   }
 
   finalizeWindowStartup(win, options)
@@ -712,6 +718,18 @@ function tryAutoDockPopoutWindow(win, preselectedTarget) {
 app.whenReady().then(() => {
   app.setName('PITWALL')
   buildAppMenu()
+
+  if (!isDev) {
+    const distRoot = path.resolve(__dirname, '../dist')
+    protocol.handle('app', (request) => {
+      const { pathname } = new URL(request.url)
+      const filePath = path.normalize(path.join(distRoot, decodeURIComponent(pathname)))
+      if (!filePath.startsWith(distRoot + path.sep) && filePath !== distRoot) {
+        return new Response('Forbidden', { status: 403 })
+      }
+      return net.fetch(pathToFileURL(filePath).href)
+    })
+  }
 
   app.on('before-quit', () => {
     isAppQuitting = true

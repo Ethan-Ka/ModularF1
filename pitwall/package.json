@@ -1,7 +1,7 @@
 {
   "name": "pitwall",
   "private": true,
-  "version": "0.1.8-alpha",
+  "version": "0.3.0-alpha",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
