@@ -1,3 +1,5 @@
+import type { DriverContext } from '../store/workspaceStore'
+
 export const PITWALL_CHANNEL_NAME = 'pitwall-sync-v2'
 
 export const WINDOW_CLIENT_ID =
@@ -22,7 +24,27 @@ export interface WidgetTransferRemoveSourceMessage {
   widgetId: string
 }
 
-export type PitwallChannelMessage = WindowStateSyncMessage | WidgetTransferRemoveSourceMessage
+export interface PopoutWidgetFocusRequestMessage {
+  kind: 'popout-widget-focus-request'
+  origin: string
+  widgetId: string
+  tabId: string
+  driverContext: DriverContext
+}
+
+export interface PopoutWidgetContextUpdateMessage {
+  kind: 'popout-widget-context-update'
+  origin: string
+  widgetId: string
+  tabId: string
+  driverContext: DriverContext
+}
+
+export type PitwallChannelMessage =
+  | WindowStateSyncMessage
+  | WidgetTransferRemoveSourceMessage
+  | PopoutWidgetFocusRequestMessage
+  | PopoutWidgetContextUpdateMessage
 
 export function createPitwallChannel(): BroadcastChannel | null {
   if (typeof BroadcastChannel === 'undefined') return null

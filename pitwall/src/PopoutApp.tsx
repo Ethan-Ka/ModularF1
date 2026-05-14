@@ -3,6 +3,7 @@ import { AmbientRaceLayer } from './components/AmbientRaceLayer/AmbientRaceLayer
 import { WidgetHost } from './components/WidgetHost/WidgetHost'
 import { useAmbientStore } from './store/ambientStore'
 import { useDriverStore } from './store/driverStore'
+import { useFocusEditorStore } from './store/focusEditorStore'
 import { useSessionStore } from './store/sessionStore'
 import { useWindowStore } from './store/windowStore'
 import { useWorkspaceStore } from './store/workspaceStore'
@@ -57,6 +58,7 @@ function pickDriverSyncState(state: ReturnType<typeof useDriverStore.getState>) 
   return {
     starred: state.starred,
     canvasFocus: state.canvasFocus,
+    windowFocusSelector: state.windowFocusSelector,
   }
 }
 
@@ -222,6 +224,33 @@ function PopoutSync() {
       postState('driver', pickDriverSyncState(state))
     })
 
+    const unsubscribeFocusEditor = useFocusEditorStore.subscribe((state, prevState) => {
+      if (applyingRemoteState) return
+      const { editingWidgetId } = state
+      if (!editingWidgetId || editingWidgetId === prevState.editingWidgetId) return
+
+      const workspace = useWorkspaceStore.getState()
+      let widgetTabId: string | undefined
+      let driverContext: import('./store/workspaceStore').DriverContext | undefined
+      for (const tab of workspace.tabs) {
+        const widget = tab.widgets[editingWidgetId]
+        if (widget) {
+          widgetTabId = tab.id
+          driverContext = widget.driverContext
+          break
+        }
+      }
+      if (!widgetTabId || driverContext === undefined) return
+
+      channel.postMessage({
+        kind: 'popout-widget-focus-request',
+        origin: WINDOW_CLIENT_ID,
+        widgetId: editingWidgetId,
+        tabId: widgetTabId,
+        driverContext,
+      })
+    })
+
     const unsubscribeBootstrap = window.electronAPI?.onWindowBootstrapWidget?.((rawPayload) => {
       applyBootstrapWidgetPayload(rawPayload)
     })
@@ -241,6 +270,18 @@ function PopoutSync() {
       const message = event.data
       if (!message || typeof message !== 'object') return
       if (message.origin === WINDOW_CLIENT_ID) return
+
+      if (message.kind === 'popout-widget-context-update') {
+        const workspace = useWorkspaceStore.getState()
+        for (const tab of workspace.tabs) {
+          if (tab.widgets[message.widgetId]) {
+            workspace.updateWidgetConfig(tab.id, message.widgetId, { driverContext: message.driverContext })
+            break
+          }
+        }
+        return
+      }
+
       if (message.kind !== 'state-sync') return
 
       applyingRemoteState = true
@@ -267,6 +308,7 @@ function PopoutSync() {
       unsubscribeSession()
       unsubscribeAmbient()
       unsubscribeDriver()
+      unsubscribeFocusEditor()
       if (typeof unsubscribeBootstrap === 'function') unsubscribeBootstrap()
       if (typeof unsubscribeDock === 'function') unsubscribeDock()
       channel.close()

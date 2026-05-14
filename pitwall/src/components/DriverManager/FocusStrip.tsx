@@ -101,6 +101,8 @@ export function FocusStrip() {
   const updateWidgetConfig = useWorkspaceStore((s) => s.updateWidgetConfig)
   const editingWidgetId = useFocusEditorStore((s) => s.editingWidgetId)
   const setEditingWidgetId = useFocusEditorStore((s) => s.setEditingWidgetId)
+  const remoteWidgetEdit = useFocusEditorStore((s) => s.remoteWidgetEdit)
+  const setRemoteWidgetEdit = useFocusEditorStore((s) => s.setRemoteWidgetEdit)
   const { data: positions } = usePositions()
   const [panelOpen, setPanelOpen] = useState(false)
   const selectorTrackRef = useRef<HTMLDivElement | null>(null)
@@ -127,25 +129,26 @@ export function FocusStrip() {
     return null
   }, [editingWidgetId, tabs])
 
-  const isWidgetFocusMode = editingWidgetEntry != null
+  const isWidgetFocusMode = editingWidgetEntry != null || remoteWidgetEdit != null
+  const editingDriverContext = editingWidgetEntry?.widget.driverContext ?? remoteWidgetEdit?.driverContext ?? 'FOCUS'
   const focusSelectorOptions = isWidgetFocusMode ? WIDGET_FOCUS_SELECTOR_OPTIONS : FOCUS_SELECTOR_OPTIONS
   const selectorMinWidth = isWidgetFocusMode ? 68 : 62
 
   const activeSelectorKey = isWidgetFocusMode
-    ? editingWidgetEntry.widget.driverContext === 'FOCUS'
+    ? editingDriverContext === 'FOCUS'
       ? 'FOCUS'
-      : editingWidgetEntry.widget.driverContext.startsWith('PINNED:')
+      : editingDriverContext.startsWith('PINNED:')
         ? null
-        : editingWidgetEntry.widget.driverContext
+        : editingDriverContext as typeof WIDGET_FOCUS_SELECTOR_OPTIONS[number]['key']
     : windowFocusSelector === 'FOCUS' && canvasFocus != null
       ? null
       : windowFocusSelector
 
   useEffect(() => {
-    if (editingWidgetId && !editingWidgetEntry) {
+    if (editingWidgetId && !editingWidgetEntry && !remoteWidgetEdit) {
       setEditingWidgetId(null)
     }
-  }, [editingWidgetEntry, editingWidgetId, setEditingWidgetId])
+  }, [editingWidgetEntry, editingWidgetId, remoteWidgetEdit, setEditingWidgetId])
 
   useEffect(() => {
     if (!editingWidgetId) return
@@ -155,14 +158,15 @@ export function FocusStrip() {
       if (!target) return
 
       if (target.closest('[data-focus-strip]')) return
-      if (target.closest(`[data-widget-id="${editingWidgetId}"]`)) return
+      if (!remoteWidgetEdit && target.closest(`[data-widget-id="${editingWidgetId}"]`)) return
 
       setEditingWidgetId(null)
+      setRemoteWidgetEdit(null)
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
     return () => document.removeEventListener('pointerdown', handlePointerDown)
-  }, [editingWidgetId, setEditingWidgetId])
+  }, [editingWidgetId, remoteWidgetEdit, setEditingWidgetId, setRemoteWidgetEdit])
 
   useEffect(() => {
     const removed = prevStarredRef.current.filter((num) => !starred.includes(num))
@@ -284,12 +288,12 @@ export function FocusStrip() {
   }
 
   const selectedDriverNumber = isWidgetFocusMode
-    ? resolveContextDriver(editingWidgetEntry.widget.driverContext)
+    ? resolveContextDriver(editingDriverContext)
     : resolveWindowFocusDriver()
   const selectedFocusLabel = isWidgetFocusMode
-    ? editingWidgetEntry.widget.driverContext === 'FOCUS'
+    ? editingDriverContext === 'FOCUS'
       ? 'Inherit'
-      : editingWidgetEntry.widget.driverContext
+      : editingDriverContext
     : windowFocusSelector === 'FOCUS' && canvasFocus == null
       ? 'All'
       : windowFocusSelector === 'FOCUS'
@@ -363,9 +367,11 @@ export function FocusStrip() {
 
   function handleSelectorClick(key: typeof FOCUS_SELECTOR_OPTIONS[number]['key']) {
     if (isWidgetFocusMode) {
-      updateWidgetConfig(editingWidgetEntry.tabId, editingWidgetEntry.widget.id, {
-        driverContext: key,
-      })
+      if (editingWidgetEntry) {
+        updateWidgetConfig(editingWidgetEntry.tabId, editingWidgetEntry.widget.id, { driverContext: key })
+      } else if (remoteWidgetEdit) {
+        setRemoteWidgetEdit({ ...remoteWidgetEdit, driverContext: key })
+      }
       return
     }
 
@@ -378,9 +384,11 @@ export function FocusStrip() {
   function handleStarClick(driverNumber: number, isActive: boolean) {
     if (isWidgetFocusMode) {
       const nextContext: DriverContext = isActive ? 'FOCUS' : `PINNED:${driverNumber}`
-      updateWidgetConfig(editingWidgetEntry.tabId, editingWidgetEntry.widget.id, {
-        driverContext: nextContext,
-      })
+      if (editingWidgetEntry) {
+        updateWidgetConfig(editingWidgetEntry.tabId, editingWidgetEntry.widget.id, { driverContext: nextContext })
+      } else if (remoteWidgetEdit) {
+        setRemoteWidgetEdit({ ...remoteWidgetEdit, driverContext: nextContext })
+      }
       return
     }
 
@@ -415,7 +423,7 @@ export function FocusStrip() {
 
         {isWidgetFocusMode && (
           <button
-            onClick={() => setEditingWidgetId(null)}
+            onClick={() => { setEditingWidgetId(null); setRemoteWidgetEdit(null) }}
             className="interactive-button"
             style={{
               display: 'flex',
@@ -518,7 +526,7 @@ export function FocusStrip() {
           const pos = getPosition(driver.driver_number)
           const color = getTeamColor(driver.driver_number)
           const isFocused = isWidgetFocusMode
-            ? editingWidgetEntry.widget.driverContext === `PINNED:${driver.driver_number}`
+            ? editingDriverContext === `PINNED:${driver.driver_number}`
             : canvasFocus === driver.driver_number
           const entering = !exiting && enteringStarred.includes(driver.driver_number)
 

@@ -201,17 +201,8 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
     }
   }
 
-  async function openSettingsWindow() {
-    if (!window.electronAPI) { setSettingsOpen(true); return }
-    try {
-      await window.electronAPI.openNewWindow({
-        windowKind: 'widget-settings',
-        widgetId,
-        popoutBounds: { width: 300, height: 680 },
-      })
-    } catch {
-      setSettingsOpen(true)
-    }
+  function openSettingsWindow() {
+    setSettingsOpen(true)
   }
 
   async function dockWidgetBackToWorkspace() {
@@ -271,21 +262,21 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
           />
         )}
 
-        {/* Chrome header — full header is the drag handle */}
+        {/* Chrome header */}
         <div
           className="widget-drag-handle"
-          title={isPoppedOut ? 'Drag over main workspace to auto-dock, or press close to dock back.' : undefined}
+          onClick={isPoppedOut ? () => setEditingWidgetId(widgetId) : undefined}
           style={{
             display: 'flex',
             alignItems: 'center',
             paddingInline: 8,
             height: 22,
-            borderBottom: '0.5px solid var(--border)',
+            borderBottom: `0.5px solid ${isPoppedOut && isFocusEditingTarget ? (teamColor ?? 'var(--green)') : 'var(--border)'}`,
             background: 'var(--bg4)',
             flexShrink: 0,
             gap: 6,
-            cursor: isPoppedOut ? 'move' : 'grab',
-            WebkitAppRegion: isPoppedOut ? 'drag' : 'no-drag',
+            cursor: isPoppedOut ? 'pointer' : 'grab',
+            WebkitAppRegion: 'no-drag',
             position: 'relative',
             zIndex: 1,
           }}
@@ -418,6 +409,32 @@ export function WidgetHost({ widgetId, children }: WidgetHostProps) {
             >
               ↗
             </button>
+          )}
+
+          {/* Drag grip — only in popout mode; click stopped so it doesn't trigger header onClick */}
+          {isPoppedOut && (
+            <div
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to move window"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                padding: '0 4px',
+                cursor: 'move',
+                WebkitAppRegion: 'drag',
+                flexShrink: 0,
+                opacity: 0.4,
+              }}
+            >
+              {[0, 1].map((row) => (
+                <div key={row} style={{ display: 'flex', gap: 2 }}>
+                  <div style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--muted)' }} />
+                  <div style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--muted)' }} />
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Close button */}

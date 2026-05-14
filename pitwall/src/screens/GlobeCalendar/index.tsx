@@ -97,6 +97,7 @@ const TRACK_SVG: Record<string, string> = {
   'São Paulo':    'interlagos-1',
   'Sao Paulo':    'interlagos-1',
   'Abu Dhabi':    'yas-marina-1',
+  'Madrid':       'madring-1',
 }
 
 const CIRCUIT_META: Record<string, { laps: number; km: number; turns: number; drs: number; type: 'permanent' | 'street' | 'semi-permanent' }> = {
@@ -377,6 +378,197 @@ const CIRCUIT_ALT: Record<string, number> = {
   'Abu Dhabi':     0.22,
 }
 
+// Notable championships & records decided at each circuit
+const CIRCUIT_MILESTONES: Record<string, Array<{ year: number; driver: string; milestone: string; icon: string }>> = {
+  'Suzuka': [
+    { year: 1989, driver: 'Ayrton Senna', milestone: 'Championship collision with Alain Prost', icon: '💥' },
+    { year: 1990, driver: 'Ayrton Senna', milestone: 'Back-to-back collision; second collision', icon: '💥' },
+    { year: 2000, driver: 'Michael Schumacher', milestone: 'Championship win (7 of 13 titles)', icon: '👑' },
+    { year: 2008, driver: 'Lewis Hamilton', milestone: 'First championship at age 23', icon: '👑' },
+  ],
+  'Abu Dhabi': [
+    { year: 2021, driver: 'Max Verstappen', milestone: 'Controversial final-lap championship', icon: '⚖️' },
+    { year: 2023, driver: 'Max Verstappen', milestone: 'Record 19th win of the season', icon: '🏆' },
+  ],
+  'Silverstone': [
+    { year: 1950, driver: 'Giuseppe Farina', milestone: 'First ever F1 World Championship race', icon: '🚩' },
+    { year: 2008, driver: 'Lewis Hamilton', milestone: 'Championship won by 1 point (Brazil)', icon: '👑' },
+  ],
+  'Monza': [
+    { year: 1971, driver: 'Peter Gethin', milestone: 'Closest finish ever: 0.01 seconds', icon: '📏' },
+  ],
+  'Spa': [
+    { year: 2021, driver: 'Max Verstappen', milestone: 'Won from last on grid in rain', icon: '🌧️' },
+  ],
+  'Monaco': [
+    { year: 1950, driver: 'Juan Manuel Fangio', milestone: 'First Monaco GP of the modern era', icon: '🚩' },
+  ],
+  'Mexico City': [
+    { year: 2023, driver: 'Max Verstappen', milestone: '19-win season record (14th win)', icon: '🏆' },
+  ],
+  'São Paulo': [
+    { year: 2008, driver: 'Lewis Hamilton', milestone: 'Championship decided on final corner', icon: '⚖️' },
+  ],
+  'Sao Paulo': [
+    { year: 2008, driver: 'Lewis Hamilton', milestone: 'Championship decided on final corner', icon: '⚖️' },
+  ],
+  'Bahrain': [
+    { year: 2020, driver: 'Lewis Hamilton', milestone: '7th championship (tied Schumacher)', icon: '👑' },
+  ],
+  'Melbourne': [
+    { year: 1996, driver: 'Damon Hill', milestone: 'First ever race at Albert Park', icon: '🚩' },
+  ],
+  'Barcelona': [
+    { year: 2017, driver: 'Lewis Hamilton', milestone: 'Most testing venue; teams know it best', icon: '🔬' },
+  ],
+  'Budapest': [
+    { year: 2020, driver: 'Lewis Hamilton', milestone: 'Led every lap for record-tying win', icon: '👑' },
+  ],
+}
+
+// Constructor headquarters for reference (city coords)
+const CONSTRUCTOR_HQ: Record<string, { name: string; lat: number; lng: number; founded: number; titles: number }> = {
+  'RedBull':      { name: 'Red Bull Racing', lat: 51.8934, lng: -0.7439, founded: 1997, titles: 4 },
+  'Ferrari':      { name: 'Scuderia Ferrari', lat: 44.2832, lng: 11.7133, founded: 1929, titles: 16 },
+  'Mercedes':     { name: 'Mercedes-AMG F1', lat: 48.2640, lng: 11.6210, founded: 1954, titles: 8 },
+  'McLaren':      { name: 'McLaren F1', lat: 51.8934, lng: -0.5012, founded: 1963, titles: 8 },
+  'Alpine':       { name: 'Alpine F1', lat: 48.9945, lng: 2.4355, founded: 2021, titles: 0 },
+  'Aston Martin': { name: 'Aston Martin F1', lat: 52.3333, lng: -1.9000, founded: 2021, titles: 0 },
+  'Alfa Romeo':   { name: 'Alfa Romeo F1', lat: 45.6295, lng: 8.7245, founded: 1950, titles: 0 },
+  'Haas':         { name: 'Haas F1', lat: 35.0078, lng: -106.6919, founded: 2016, titles: 0 },
+  'Kick Sauber':  { name: 'Sauber F1', lat: 47.5062, lng: 8.3847, founded: 1993, titles: 0 },
+  'Williams':     { name: 'Williams F1', lat: 51.5030, lng: -0.7560, founded: 1977, titles: 7 },
+}
+
+// Strategic geographic features (terrain, weather patterns, altitude zones)
+const CIRCUIT_ENVIRONMENT: Record<string, { terrain: string; climate: string; challenges: string[] }> = {
+  'Austin': {
+    terrain: 'Texas Hill Country — limestone bluffs, elevation changes',
+    climate: 'Hot & humid subtropical — afternoon thunderstorms common',
+    challenges: ['Elevation changes punish setups', 'High heat stress on tires', 'Sudden rain risk'],
+  },
+  'Bahrain': {
+    terrain: 'Desert island — below sea level in sections',
+    climate: 'Hot & arid — Caspian sand winds in early season',
+    challenges: ['Sand intrusion into systems', 'Extreme heat', 'Low grip in windy conditions'],
+  },
+  'Jeddah': {
+    terrain: 'Red Sea corniche — urban canyon effect',
+    climate: 'Hot & humid with strong winds off Caspian',
+    challenges: ['Narrow walls = zero margin', 'High speed (avg 250 km/h)', 'Wind sensitivity'],
+  },
+  'Melbourne': {
+    terrain: 'Albert Park lakeside — tree-lined public roads',
+    climate: 'Mild temperate — autumn variable weather',
+    challenges: ['Cool early-season temperatures', 'Unpredictable rain', 'Low grip in cold'],
+  },
+  'Suzuka': {
+    terrain: 'Japanese mountain circuit — tropical climate',
+    climate: 'Warm humid monsoon season — typhoon risk October',
+    challenges: ['Typhoon potential', 'High humidity', 'Historic pressure cooker racing'],
+  },
+  'Shanghai': {
+    terrain: 'Sprawling urban circuit — low-lying delta',
+    climate: 'Humid subtropical — spring/autumn moderate',
+    challenges: ['Large lap length = strategy heavy', 'Fog/haze common', 'Diverse corner types'],
+  },
+  'Miami': {
+    terrain: 'Purpose-built stadium layout — Hard Rock integration',
+    climate: 'Hot humid tropical — afternoon thunderstorms',
+    challenges: ['New circuit (2022)', 'Heavy entertainment focus', 'Urban heat island'],
+  },
+  'Imola': {
+    terrain: 'Narrow Santerno River valley — Italian hills',
+    climate: 'Cool temperate spring — rain likely',
+    challenges: ['Tight confines = no margin', 'Historic danger (Ayrton memorial)', 'Cold temps'],
+  },
+  'Monaco': {
+    terrain: 'Tight Principality streets — 7m elevation change',
+    climate: 'Mediterranean — occasional freak showers',
+    challenges: ['No run-off areas', 'Street circuit grip unpredictable', 'One mistake = DNF'],
+  },
+  'Montreal': {
+    terrain: 'Île Notre-Dame island — St. Lawrence River',
+    climate: 'Warm humid North American — frequent rain',
+    challenges: ['Wall of Champions barrier', 'Extreme safety car frequency', 'Cold start risk'],
+  },
+  'Barcelona': {
+    terrain: 'Catalonian hills — Mediterranean coastline',
+    climate: 'Hot Mediterranean — very consistent & dry',
+    challenges: ['Most used for testing — teams know it best', 'Smooth track surface', 'Limited variables'],
+  },
+  'Spielberg': {
+    terrain: 'Alpine valley — Austrian Styrian mountains',
+    climate: 'Warm days cool nights — afternoon thunderstorms',
+    challenges: ['High altitude effects on cooling', 'Compact layout (10 turns)', 'Thin air'],
+  },
+  'Silverstone': {
+    terrain: 'Former WWII airfield — British moorlands',
+    climate: 'Cool & changeable — rain very possible',
+    challenges: ['Copse/Maggotts/Becketts high-speed challenge', 'Cold conditions', 'British weather'],
+  },
+  'Budapest': {
+    terrain: 'Hungaroring valley — low-lying muddy terrain',
+    climate: 'Hot & dry summer — humidity mid-summer',
+    challenges: ['High downforce dependent', 'Extremely tight corners', 'Heat buildup intense'],
+  },
+  'Spa': {
+    terrain: 'Ardennes forest — 7km lap, 300m elevation change',
+    climate: 'Cool unpredictable — rain almost guaranteed',
+    challenges: ['Multiple microclimates simultaneously', 'Eau Rouge/Raidillon legendary', 'Spectator favorite'],
+  },
+  'Zandvoort': {
+    terrain: 'Dutch coastal dunes — 18-degree banking',
+    climate: 'Cool & windy — coastal gust effects',
+    challenges: ['Banked turns unusual for modern F1', 'Dutch crowd (orange)', 'Wind sensitivity'],
+  },
+  'Monza': {
+    terrain: 'Italian royal park — historic venue',
+    climate: 'Warm sunny Italian summer — occasional storms',
+    challenges: ['Temple of Speed', 'Slipstreaming decides races', 'Lowest downforce of year'],
+  },
+  'Baku': {
+    terrain: 'Medieval city meets modern boulevard — below sea level (-28m)',
+    climate: 'Warm & breezy — strong Caspian winds',
+    challenges: ['Longest straight (2.2km)', 'Extreme safety car frequency', 'Sea-level effects'],
+  },
+  'Singapore': {
+    terrain: 'Marina Bay street circuit — humid tropical island',
+    climate: 'Hot & humid tropical — heavy downpours possible',
+    challenges: ['Only night race', 'Drivers lose 3kg per race', 'Most physically demanding'],
+  },
+  'Lusail': {
+    terrain: 'Desert floodlit circuit — minimal low-speed',
+    climate: 'Hot & dry desert — cooler under lights',
+    challenges: ['High-speed sweepers dominant', 'Tight track = no margin', 'Artificial cooling effect'],
+  },
+  'Las Vegas': {
+    terrain: 'Strip circuit — elevation (620m)',
+    climate: 'Cold nights November — clear & dry',
+    challenges: ['Glamour focus', 'Late-night racing', 'Drain cover failures risk'],
+  },
+  'Mexico City': {
+    terrain: 'High altitude urban (2,285m) — thin air effects',
+    climate: 'Mild at altitude — cool evenings, dry',
+    challenges: ['20% downforce reduction', '5% engine power loss', 'Sergio Pérez home race passion'],
+  },
+  'São Paulo': {
+    terrain: 'Anti-clockwise Interlagos — Brazilian mountains',
+    climate: 'Humid tropical — rain almost guaranteed',
+    challenges: ['Late-braking punishes setups', 'Rain intensity variable', 'Ayrton Senna legacy'],
+  },
+  'Abu Dhabi': {
+    terrain: 'Yas Marina island — desert oasis',
+    climate: 'Hot & dry — perfect evenings',
+    challenges: ['Season finale pressure', 'Redesigned 2021 for overtaking', 'Championship deciders'],
+  },
+  'Madrid': {
+    terrain: 'IFEMA exhibition district outskirts — plateau (600m)',
+    climate: 'Hot & dry Spanish interior — very low humidity',
+    challenges: ['Brand new for 2026', 'Modern Tilke design', 'Urban setting'],
+  },
+}
+
 const NEARBY_LABELS: Record<string, Array<{ lat: number; lng: number; text: string }>> = {
   'Austin':        [{ lat: 30.2672, lng: -97.7431, text: 'Austin' },       { lat: 29.4241, lng: -98.4936, text: 'San Antonio' },  { lat: 30.2241, lng: -97.4742, text: 'Bastrop' }],
   'Bahrain':       [{ lat: 26.2285, lng: 50.5860,  text: 'Manama' },       { lat: 26.1297, lng: 50.5550,  text: 'Riffa' },         { lat: 26.2640, lng: 50.6110,  text: 'Muharraq' }],
@@ -409,6 +601,35 @@ const NEARBY_LABELS: Record<string, Array<{ lat: number; lng: number; text: stri
   'Madrid':        [{ lat: 40.4168, lng: -3.7038,  text: 'Madrid' },       { lat: 39.8628, lng: -4.0273,  text: 'Toledo' },        { lat: 40.9429, lng: -4.1088,  text: 'Segovia' }],
 }
 
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371
+  const dLat = (b.lat - a.lat) * Math.PI / 180
+  const dLng = (b.lng - a.lng) * Math.PI / 180
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+}
+
+function findNearestCircuitShort(
+  pov: { lat: number; lng: number },
+  weekends: RaceWeekend[],
+): string | null {
+  let bestCircuit: string | null = null
+  let bestDistance = Number.POSITIVE_INFINITY
+
+  for (const weekend of weekends) {
+    const coords = CIRCUIT_COORDS[weekend.circuitShort]
+    if (!coords) continue
+
+    const distance = haversineKm(pov, coords)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestCircuit = weekend.circuitShort
+    }
+  }
+
+  return bestCircuit
+}
+
 const FALLBACK_POV = { lat: 20, lng: 0, altitude: 2 }
 const INITIAL_POV  = { lat: 20, lng: 10, altitude: 2 }
 const FOCUSED_ALT  = 0.35
@@ -419,7 +640,7 @@ const GEOJSON_URL  = 'https://raw.githubusercontent.com/nvkelso/natural-earth-ve
 interface GlobeViewProps {
   allArcsData: any[]
   pointsData: any[]
-  cityHtmlData: any[]
+  htmlData: any[]
   focusedIdx: number
   focusedCircuit: string | null
   globeSize: { width: number; height: number }
@@ -429,13 +650,21 @@ interface GlobeViewProps {
 }
 
 const GlobeView = memo(function GlobeView({
-  allArcsData, pointsData, cityHtmlData,
+  allArcsData, pointsData, htmlData,
   focusedIdx, focusedCircuit,
   globeSize, geoJson, onGlobeReady, globeRef,
 }: GlobeViewProps) {
   const prevFocusedIdxRef = useRef(-1)
   const [outIdx, setOutIdx] = useState(-1)
   const [phase, setPhase] = useState(1)
+
+  useEffect(() => {
+    if (document.getElementById('gp-pulse-style')) return
+    const s = document.createElement('style')
+    s.id = 'gp-pulse-style'
+    s.textContent = '@keyframes gp-ring{0%{transform:scale(0.7);opacity:0.9}100%{transform:scale(3.6);opacity:0}}'
+    document.head.appendChild(s)
+  }, [])
 
   useEffect(() => {
     const prevIdx = prevFocusedIdxRef.current
@@ -485,6 +714,18 @@ const GlobeView = memo(function GlobeView({
       }}
       arcStroke={0.25}
       arcsTransitionDuration={0}
+      arcDashLength={(d: any) => {
+        const active = focusedIdx !== -1 && d.fromIdx >= focusedIdx - 2 && d.fromIdx <= focusedIdx + 1
+        return active && !d.done ? 0.18 : 1
+      }}
+      arcDashGap={(d: any) => {
+        const active = focusedIdx !== -1 && d.fromIdx >= focusedIdx - 2 && d.fromIdx <= focusedIdx + 1
+        return active && !d.done ? 0.82 : 0
+      }}
+      arcDashAnimateTime={(d: any) => {
+        const active = focusedIdx !== -1 && d.fromIdx >= focusedIdx - 2 && d.fromIdx <= focusedIdx + 1
+        return active && !d.done ? 850 : 0
+      }}
       pointsData={pointsData}
       pointLat="lat"
       pointLng="lng"
@@ -495,12 +736,24 @@ const GlobeView = memo(function GlobeView({
       pointsMerge={false}
       pointsTransitionDuration={0}
       onGlobeReady={onGlobeReady}
-      htmlElementsData={cityHtmlData}
+      htmlElementsData={htmlData}
       htmlLat="lat"
       htmlLng="lng"
       htmlAltitude="altitude"
       // @ts-ignore
       htmlElement={(d: any) => {
+        if (d.isPulse) {
+          const wrap = document.createElement('div')
+          wrap.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;width:14px;height:14px;pointer-events:none;'
+          const r1 = document.createElement('div')
+          r1.style.cssText = 'position:absolute;width:14px;height:14px;border-radius:50%;border:1px solid rgba(232,19,43,0.85);transform-origin:center;animation:gp-ring 2s ease-out infinite;'
+          const r2 = document.createElement('div')
+          r2.style.cssText = 'position:absolute;width:14px;height:14px;border-radius:50%;border:1px solid rgba(232,19,43,0.55);transform-origin:center;animation:gp-ring 2s ease-out 0.75s infinite;'
+          const dot = document.createElement('div')
+          dot.style.cssText = 'width:3px;height:3px;border-radius:50%;background:rgba(232,19,43,1);box-shadow:0 0 5px rgba(232,19,43,0.8);'
+          wrap.appendChild(r1); wrap.appendChild(r2); wrap.appendChild(dot)
+          return wrap
+        }
         const wrap = document.createElement('div')
         wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;'
         const dot = document.createElement('div')
@@ -529,6 +782,7 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
   const lastActiveIdx = useRef<number>(-1)
   // Tracks the last circuit we pointed to — readable by stable callbacks
   const currentCircuitRef = useRef<string | null>(null)
+  const focusCheckTimerRef = useRef<number | null>(null)
 
   const [geoJson, setGeoJson]         = useState<any>(null)
   const [globeSize, setGlobeSize]     = useState({ width: 600, height: 360 })
@@ -594,13 +848,67 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
     [weekends]
   )
 
-  // City label HTML elements for focused circuit
-  const cityHtmlData = useMemo(() =>
-    (NEARBY_LABELS[focusedCircuit ?? ''] ?? []).map(l => ({
+  const nextCircuit = nextIndex >= 0 ? (weekends[nextIndex]?.circuitShort ?? null) : null
+  const doneCount   = nextIndex >= 0 ? nextIndex : weekends.length
+
+  const kmTraveled = useMemo(() => {
+    let total = 0
+    for (let i = 0; i < weekends.length - 1; i++) {
+      const rs = weekends[i].sessions.find(s => s.session_type === 'Race')
+      if (!rs || new Date(rs.date_end).getTime() >= now - 10 * 60_000) break
+      const a = CIRCUIT_COORDS[weekends[i].circuitShort]
+      const b = CIRCUIT_COORDS[weekends[i + 1].circuitShort]
+      if (a && b) total += haversineKm(a, b)
+    }
+    return total
+  }, [weekends, now])
+
+  const syncFocusedCircuitWithGlobe = useCallback((requestedCircuit?: string | null) => {
+    const globe = globeRef.current
+    if (!globe) return
+
+    const pov = globe.pointOfView?.()
+    if (!pov) return
+
+    const nearestCircuit = findNearestCircuitShort(pov, weekends)
+    if (!nearestCircuit) return
+
+    const activeCircuit = requestedCircuit ?? currentCircuitRef.current
+    if (!activeCircuit) return
+
+    if (nearestCircuit !== activeCircuit) {
+      currentCircuitRef.current = nearestCircuit
+      setFocusedCircuit(nearestCircuit)
+      const coords = CIRCUIT_COORDS[nearestCircuit]
+      if (coords) {
+        globe.pointOfView({ lat: coords.lat, lng: coords.lng, altitude: CIRCUIT_ALT[nearestCircuit] ?? FOCUSED_ALT }, 0)
+      }
+      return
+    }
+
+    setFocusedCircuit(nearestCircuit)
+  }, [weekends])
+
+  const queueFocusVerification = useCallback((requestedCircuit?: string | null, delayMs = 0) => {
+    if (focusCheckTimerRef.current !== null) {
+      window.clearTimeout(focusCheckTimerRef.current)
+    }
+
+    focusCheckTimerRef.current = window.setTimeout(() => {
+      focusCheckTimerRef.current = null
+      syncFocusedCircuitWithGlobe(requestedCircuit)
+    }, delayMs)
+  }, [syncFocusedCircuitWithGlobe])
+
+  // City labels for focused circuit + pulse beacon for next race
+  const allHtmlData = useMemo(() => {
+    const cities = (NEARBY_LABELS[focusedCircuit ?? ''] ?? []).map(l => ({
       lat: l.lat, lng: l.lng, altitude: 0.005, text: l.text,
-    })),
-    [focusedCircuit]
-  )
+    }))
+    const nc = nextCircuit ? CIRCUIT_COORDS[nextCircuit] : null
+    if (!nc) return cities
+    return [...cities, { lat: nc.lat, lng: nc.lng, altitude: 0.015, isPulse: true }]
+  }, [focusedCircuit, nextCircuit])
 
   // ── Globe camera ──
 
@@ -619,7 +927,8 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
       coords ? { lat: coords.lat, lng: coords.lng, altitude: CIRCUIT_ALT[circuitShort] ?? FOCUSED_ALT } : FALLBACK_POV,
       durationMs
     )
-  }, [setFocusedCircuit])
+    queueFocusVerification(circuitShort, durationMs + 120)
+  }, [queueFocusVerification])
 
   const handleGlobeReady = useCallback(() => {
     globeReady.current = true
@@ -636,10 +945,11 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
         coords ? { lat: coords.lat, lng: coords.lng, altitude: CIRCUIT_ALT[toCircuit] ?? FOCUSED_ALT } : FALLBACK_POV,
         0
       )
+      queueFocusVerification(toCircuit, 0)
     } else {
       globeRef.current.pointOfView(INITIAL_POV, 0)
     }
-  }, [setFocusedCircuit])
+  }, [queueFocusVerification])
 
   // ── Scroll → globe zoom (scrollend: fires once after snap animation finishes) ──
   // DOM order is reversed: domIdx 0 = last weekend, domIdx N-1 = first weekend.
@@ -682,6 +992,14 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekends.length > 0 ? 'ready' : 'loading'])
 
+  useEffect(() => {
+    return () => {
+      if (focusCheckTimerRef.current !== null) {
+        window.clearTimeout(focusCheckTimerRef.current)
+      }
+    }
+  }, [])
+
 
   if (weekends.length === 0) {
     return (
@@ -701,7 +1019,7 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
         <GlobeView
           allArcsData={allArcsData}
           pointsData={pointsData}
-          cityHtmlData={cityHtmlData}
+          htmlData={allHtmlData}
           focusedIdx={focusedIdx}
           focusedCircuit={focusedCircuit}
           globeSize={globeSize}
@@ -719,6 +1037,28 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
           position: 'absolute', inset: 0, pointerEvents: 'none',
           background: 'radial-gradient(ellipse 60% 60% at 50% 50%, transparent 45%, rgba(0,0,0,0.92) 100%)',
         }} />
+        {/* Season progress overlay */}
+        <div style={{
+          position: 'absolute', bottom: 14, left: 16, zIndex: 2,
+          pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 4,
+        }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 7.5, letterSpacing: '0.12em',
+                        color: 'rgba(255,255,255,0.5)' }}>
+            {`R${String(doneCount).padStart(2,'0')} / ${weekends.length}`}
+          </div>
+          <div style={{ width: 72, height: 1.5, background: 'rgba(255,255,255,0.1)', borderRadius: 1 }}>
+            <div style={{
+              width: `${(doneCount / weekends.length) * 100}%`,
+              height: '100%', background: 'rgba(232,19,43,0.65)', borderRadius: 1,
+            }} />
+          </div>
+          {kmTraveled > 0 && (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 7, letterSpacing: '0.08em',
+                          color: 'rgba(255,255,255,0.28)' }}>
+              {`${Math.round(kmTraveled).toLocaleString()} KM`}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Vertical race sections ── */}
@@ -919,6 +1259,30 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
                   </div>
                 )}
 
+                {/* Championship milestones */}
+                {CIRCUIT_MILESTONES[w.circuitShort] && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                    <div style={{
+                      fontFamily: 'var(--mono)', fontSize: 7.8, letterSpacing: '0.1em',
+                      color: 'rgba(232,19,43,0.65)', textTransform: 'uppercase', fontWeight: 600,
+                    }}>HISTORIC MOMENTS</div>
+                    {CIRCUIT_MILESTONES[w.circuitShort].map((m, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex', gap: 6, alignItems: 'baseline',
+                        paddingLeft: 8, borderLeft: `1px solid rgba(232,19,43,0.3)`,
+                        fontFamily: 'var(--mono)', fontSize: 7.5, lineHeight: 1.48,
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <span style={{ color: 'rgba(255,210,80,0.85)', fontWeight: 700 }}>
+                            {m.driver} {m.year}
+                          </span>
+                          <span style={{ color: 'rgba(255,255,255,0.55)' }}>{m.milestone}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Bottom block: history / record / weather / date */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
 
@@ -970,6 +1334,17 @@ export function GlobeCalendar({ weekends, now, imminentMeetingKey }: GlobeCalend
                       paddingLeft: 8,
                     }}>
                       {history.notable}
+                    </div>
+                  )}
+
+                  {/* Weather */}
+                  {history?.weather && (
+                    <div style={{
+                      display: 'flex', alignItems: 'baseline', gap: 6,
+                      fontFamily: 'var(--mono)', fontSize: 7.8, letterSpacing: '0.04em',
+                    }}>
+                      <span style={{ color: 'rgba(255,255,255,0.28)', letterSpacing: '0.1em', flexShrink: 0 }}>WEATHER</span>
+                      <span style={{ color: done ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.52)' }}>{history.weather}</span>
                     </div>
                   )}
                 </div>

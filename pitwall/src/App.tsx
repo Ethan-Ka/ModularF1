@@ -35,6 +35,7 @@ import { useLaps } from './hooks/useLaps'
 import { createPitwallChannel, WINDOW_CLIENT_ID } from './lib/windowSync'
 import { coerceWidgetTransferPayload } from './lib/widgetTransfer'
 import { useWindowStore } from './store/windowStore'
+import { useFocusEditorStore } from './store/focusEditorStore'
 import { WidgetHost } from './components/WidgetHost/WidgetHost'
 import { WIDGET_REGISTRY, getMinHeightForWidget } from './widgets/registry'
 import { resolveTeamPalette } from './lib/teamPalette'
@@ -535,6 +536,7 @@ function pickDriverSyncState(state: ReturnType<typeof useDriverStore.getState>) 
   return {
     starred: state.starred,
     canvasFocus: state.canvasFocus,
+    windowFocusSelector: state.windowFocusSelector,
   }
 }
 
@@ -675,6 +677,20 @@ function BroadcastSync() {
       postState('workspace', { tabs: state.tabs, activeTabId: state.activeTabId })
     })
 
+    const unsubscribeFocusEditor = useFocusEditorStore.subscribe((state, prevState) => {
+      if (applyingRemoteState) return
+      const { remoteWidgetEdit } = state
+      if (!remoteWidgetEdit) return
+      if (remoteWidgetEdit.driverContext === prevState.remoteWidgetEdit?.driverContext) return
+      channel.postMessage({
+        kind: 'popout-widget-context-update',
+        origin: WINDOW_CLIENT_ID,
+        widgetId: remoteWidgetEdit.widgetId,
+        tabId: remoteWidgetEdit.tabId,
+        driverContext: remoteWidgetEdit.driverContext,
+      })
+    })
+
     const unsubscribeBootstrap = window.electronAPI?.onWindowBootstrapWidget?.((rawPayload) => {
       applyBootstrapWidgetPayload(rawPayload)
     })
@@ -698,6 +714,23 @@ function BroadcastSync() {
       if (message.kind === 'widget-transfer-remove-source') {
         if (message.sourceClientId !== WINDOW_CLIENT_ID) return
         useWorkspaceStore.getState().removeWidget(message.sourceTabId, message.widgetId)
+        return
+      }
+
+      if (message.kind === 'popout-widget-focus-request') {
+        applyingRemoteState = true
+        try {
+          useFocusEditorStore.setState({
+            editingWidgetId: message.widgetId,
+            remoteWidgetEdit: {
+              widgetId: message.widgetId,
+              tabId: message.tabId,
+              driverContext: message.driverContext,
+            },
+          })
+        } finally {
+          applyingRemoteState = false
+        }
         return
       }
 
@@ -731,6 +764,7 @@ function BroadcastSync() {
       unsubscribeAmbient()
       unsubscribeDriver()
       unsubscribeWorkspace()
+      unsubscribeFocusEditor()
       if (typeof unsubscribeBootstrap === 'function') unsubscribeBootstrap()
       if (typeof unsubscribeDock === 'function') unsubscribeDock()
       channel.close()
